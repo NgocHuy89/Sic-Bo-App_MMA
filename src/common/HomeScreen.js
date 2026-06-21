@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   Alert
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import Sic Bo Game
 import SicBoModal from '../games/SicBo/SicBoModal';
@@ -19,8 +20,12 @@ const GAMES = [
   { id: '4', title: 'POKER', subtitle: 'TEXAS HOLDEM', color: '#4B0082', icon: '🃏' },
 ];
 
-export default function HomeScreen() {
-  const [balance, setBalance] = useState(10000000);
+export default function HomeScreen({ navigation, route }) {
+  const user = route?.params?.user || null;
+  const initialBalance = user ? user.balance : 0;
+  const fullName = user ? user.full_name : 'Người chơi Vô danh';
+
+  const [balance, setBalance] = useState(initialBalance);
   
   // States for Sic Bo Game
   const [isSicBoVisible, setIsSicBoVisible] = useState(false);
@@ -28,6 +33,16 @@ export default function HomeScreen() {
   // States for Global Game Loop
   const [timeLeft, setTimeLeft] = useState(60);
   const [gamePhase, setGamePhase] = useState('BETTING'); // 'BETTING' | 'RESULT'
+
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('logged_in_user');
+      // Dùng navigate để tự động bubble up lên Stack chứa Login
+      navigation.navigate('Login');
+    } catch (error) {
+      console.log('Logout error:', error);
+    }
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -83,17 +98,24 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.greeting}>Xin chào, Người chơi!</Text>
-        <Text style={styles.balance}>Số dư: <Text style={styles.balanceAmount}>{balance.toLocaleString('vi-VN')} đ</Text></Text>
+        <View>
+          <Text style={styles.greeting}>Xin chào, {fullName}!</Text>
+          <Text style={styles.balance}>Số dư: <Text style={styles.balanceAmount}>{balance.toLocaleString('vi-VN')} đ</Text></Text>
+        </View>
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+          <Text style={styles.logoutBtnText}>Đăng xuất</Text>
+        </TouchableOpacity>
       </View>
 
       <Text style={styles.sectionTitle}>CÁC TRÒ CHƠI HẤP DẪN</Text>
       
       <FlatList
         data={GAMES}
-        keyExtractor={item => item.id}
         renderItem={renderGameCard}
+        keyExtractor={item => item.id}
         contentContainerStyle={styles.listContainer}
+        numColumns={2}
+        columnWrapperStyle={styles.row}
         showsVerticalScrollIndicator={false}
       />
 
@@ -117,37 +139,55 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E0505',
   },
   header: {
-    padding: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 10,
     backgroundColor: '#350A0A',
     borderBottomWidth: 1,
     borderBottomColor: '#D4AF37',
-    marginBottom: 10,
+    marginBottom: 5,
+  },
+  logoutBtn: {
+    backgroundColor: '#A020F0',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  logoutBtnText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   greeting: {
     color: '#FFF',
-    fontSize: 18,
-    marginBottom: 5,
+    fontSize: 14,
+    marginBottom: 2,
   },
   balance: {
     color: '#D4AF37',
-    fontSize: 16,
+    fontSize: 12,
   },
   balanceAmount: {
     fontWeight: 'bold',
-    fontSize: 20,
+    fontSize: 14,
   },
   sectionTitle: {
     color: '#D4AF37',
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: 'bold',
     marginHorizontal: 20,
-    marginVertical: 15,
+    marginVertical: 5,
   },
   listContainer: {
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
+  row: {
+    justifyContent: 'space-between',
+  },
   card: {
+    width: '48%',
     borderRadius: 15,
     marginBottom: 20,
     elevation: 5,
@@ -160,20 +200,21 @@ const styles = StyleSheet.create({
     borderColor: '#D4AF37',
   },
   cardContent: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
-    padding: 20,
+    padding: 15,
   },
   cardIcon: {
-    fontSize: 40,
-    marginRight: 15,
+    fontSize: 50,
+    marginBottom: 10,
   },
   cardTextContainer: {
-    flex: 1,
+    alignItems: 'center',
+    marginBottom: 15,
   },
   cardTitle: {
     color: '#FFF',
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '900',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: {width: -1, height: 1},
@@ -181,14 +222,15 @@ const styles = StyleSheet.create({
   },
   cardSubtitle: {
     color: '#F9E596',
-    fontSize: 12,
-    letterSpacing: 2,
+    fontSize: 10,
+    letterSpacing: 1,
     marginTop: 2,
+    textAlign: 'center',
   },
   playButton: {
     backgroundColor: '#D4AF37',
     paddingVertical: 8,
-    paddingHorizontal: 15,
+    paddingHorizontal: 20,
     borderRadius: 20,
   },
   playButtonText: {

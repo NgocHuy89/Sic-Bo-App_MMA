@@ -6,7 +6,8 @@ import {
   TouchableOpacity, 
   Alert,
   Animated,
-  Easing
+  Easing,
+  ScrollView
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { styles } from './SicBoStyles';
@@ -196,10 +197,8 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
       return;
     }
     
-    // Báo thành công ra ngoài
     onBetSuccess(betAmount, betChoice);
     
-    // Reset form
     setBetAmount(0);
     setBetChoice(null);
     onClose();
@@ -213,120 +212,130 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
       onRequestClose={handleCancelBet}
     >
       <View style={styles.modalOverlay}>
-        
-        {/* HEADER: Tiêu đề đè lên viền Board */}
-        <View style={styles.headerContainer}>
-          <Text style={styles.titleText}>🎲 TÀI XỈU 🎲</Text>
-          <Text style={[styles.timerText, { color: timeLeft <= 10 ? '#FF0000' : '#D4AF37' }]}>
-            {gamePhase === 'BETTING' ? `00:${timeLeft < 10 ? '0'+timeLeft : timeLeft}` : 'KẾT QUẢ'}
-          </Text>
-        </View>
+        <TouchableOpacity style={styles.globalCloseBtn} onPress={handleCancelBet}>
+          <Text style={styles.closeButtonText}>X</Text>
+        </TouchableOpacity>
 
-        {/* MAIN BOARD */}
-        <View style={styles.boardContainer}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           
-          {/* Nút Đóng */}
-          <TouchableOpacity style={styles.closeButton} onPress={handleCancelBet}>
-            <Text style={styles.closeButtonText}>X</Text>
-          </TouchableOpacity>
-
-          <View style={styles.boardContent}>
-            
-            {/* PANEL TÀI */}
-            <TouchableOpacity 
-              style={[styles.doorPanel, betChoice === 'TAI' && styles.doorPanelActive]}
-              onPress={() => setBetChoice('TAI')}
-            >
-              <Text style={[styles.doorTitle, styles.doorTitleTai, betChoice === 'TAI' && styles.doorTitleActive]}>TÀI</Text>
-              <View style={styles.doorTotalBet}>
-                <Text style={styles.doorTotalBetText}>{totalTaiPool.toLocaleString('vi-VN')}</Text>
+          {/* HEADER */}
+          <View style={styles.headerContainer}>
+              <Text style={styles.titleText}>🎲 TÀI XỈU 🎲</Text>
+              <View style={styles.headerInfoRow}>
+                <Text style={[styles.timerText, { color: timeLeft <= 10 ? '#FF0000' : '#D4AF37' }]}>
+                  {gamePhase === 'BETTING' ? `00:${timeLeft < 10 ? '0'+timeLeft : timeLeft}` : 'KẾT QUẢ'}
+                </Text>
+                <Text style={styles.balanceText}>
+                  💰 {balance.toLocaleString('vi-VN')} đ
+                </Text>
               </View>
-              <View style={styles.doorMyBet}>
-                <Text style={styles.doorMyBetText}>{betChoice === 'TAI' ? betAmount.toLocaleString('vi-VN') : '0'}</Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* DÍCE CENTER */}
-            <View style={styles.diceCenterContainer}>
-              <View style={styles.diceIconGroup}>
-                <Animated.View style={[{ position: 'absolute', transform: getTransform(pos1, rot1) }]}>
-                  <FontAwesome5 name={diceResults[0]} size={32} color="#FFFFFF" solid />
-                </Animated.View>
-                <Animated.View style={[{ position: 'absolute', transform: getTransform(pos2, rot2) }]}>
-                  <FontAwesome5 name={diceResults[1]} size={32} color="#FFFFFF" solid />
-                </Animated.View>
-                <Animated.View style={[{ position: 'absolute', transform: getTransform(pos3, rot3) }]}>
-                  <FontAwesome5 name={diceResults[2]} size={32} color="#FFFFFF" solid />
-                </Animated.View>
-              </View>
-              {/* Highlight số tiền đang chọn */}
-              {betAmount > 0 && (
-                <View style={styles.centerBetHighlight}>
-                  <Text style={styles.centerBetText}>+{betAmount.toLocaleString('vi-VN')}</Text>
-                </View>
-              )}
             </View>
 
-            {/* PANEL XỈU */}
-            <TouchableOpacity 
-              style={[styles.doorPanel, betChoice === 'XIU' && styles.doorPanelActive]}
-              onPress={() => setBetChoice('XIU')}
-            >
-              <Text style={[styles.doorTitle, styles.doorTitleXiu, betChoice === 'XIU' && styles.doorTitleActive]}>XỈU</Text>
-              <View style={styles.doorTotalBet}>
-                <Text style={styles.doorTotalBetText}>{totalXiuPool.toLocaleString('vi-VN')}</Text>
+            <View style={styles.boardContainer}>
+              <View style={styles.boardContent}>
+                {/* PANEL TÀI */}
+                <TouchableOpacity 
+                  style={[styles.doorPanel, betChoice === 'TAI' && styles.doorPanelActive]}
+                  onPress={() => setBetChoice('TAI')}
+                >
+                  <Text style={[styles.doorTitle, styles.doorTitleTai, betChoice === 'TAI' && styles.doorTitleActive]}>TÀI</Text>
+                  <View style={styles.doorTotalBet}>
+                    <Text style={styles.doorTotalBetText}>{totalTaiPool.toLocaleString('vi-VN')}</Text>
+                  </View>
+                  <View style={styles.doorMyBet}>
+                    <Text style={styles.doorMyBetText}>{betChoice === 'TAI' ? betAmount.toLocaleString('vi-VN') : '0'}</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* DÍCE CENTER */}
+                <View style={styles.diceCenterContainer}>
+                  <View style={styles.diceIconGroup}>
+                    <Animated.View style={[{ position: 'absolute', transform: getTransform(pos1, rot1) }]}>
+                      <FontAwesome5 name={diceResults[0]} size={32} color="#FFFFFF" solid />
+                    </Animated.View>
+                    <Animated.View style={[{ position: 'absolute', transform: getTransform(pos2, rot2) }]}>
+                      <FontAwesome5 name={diceResults[1]} size={32} color="#FFFFFF" solid />
+                    </Animated.View>
+                    <Animated.View style={[{ position: 'absolute', transform: getTransform(pos3, rot3) }]}>
+                      <FontAwesome5 name={diceResults[2]} size={32} color="#FFFFFF" solid />
+                    </Animated.View>
+                  </View>
+                  {betAmount > 0 && (
+                    <View style={styles.centerBetHighlight}>
+                      <Text 
+                        style={styles.centerBetText}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                      >
+                        +{betAmount.toLocaleString('vi-VN')}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* PANEL XỈU */}
+                <TouchableOpacity 
+                  style={[styles.doorPanel, betChoice === 'XIU' && styles.doorPanelActive]}
+                  onPress={() => setBetChoice('XIU')}
+                >
+                  <Text style={[styles.doorTitle, styles.doorTitleXiu, betChoice === 'XIU' && styles.doorTitleActive]}>XỈU</Text>
+                  <View style={styles.doorTotalBet}>
+                    <Text style={styles.doorTotalBetText}>{totalXiuPool.toLocaleString('vi-VN')}</Text>
+                  </View>
+                  <View style={styles.doorMyBet}>
+                    <Text style={styles.doorMyBetText}>{betChoice === 'XIU' ? betAmount.toLocaleString('vi-VN') : '0'}</Text>
+                  </View>
+                </TouchableOpacity>
               </View>
-              <View style={styles.doorMyBet}>
-                <Text style={styles.doorMyBetText}>{betChoice === 'XIU' ? betAmount.toLocaleString('vi-VN') : '0'}</Text>
+            </View>
+
+          {/* LỊCH SỬ PHIÊN CHƠI */}
+          <View style={styles.historyContainer}>
+              {history.map((res, index) => (
+                <View 
+                  key={index} 
+                  style={[
+                    styles.historyDot, 
+                    res === 'TAI' ? styles.historyDotTai : styles.historyDotXiu
+                  ]} 
+                />
+              ))}
+            </View>
+
+            {/* ROW CHIPS */}
+            <View style={styles.chipsWrapper}>
+              <View style={styles.chipsContainer}>
+                {CHIPS.map((chip, index) => (
+                  <TouchableOpacity 
+                    key={index} 
+                    style={styles.chipButton}
+                    onPress={() => handleAddChip(chip.value)}
+                  >
+                    <Text style={styles.chipText}>{chip.label}</Text>
+                  </TouchableOpacity>
+                ))}
               </View>
-            </TouchableOpacity>
+            </View>
 
-          </View>
-        </View>
-
-        {/* LỊCH SỬ PHIÊN CHƠI */}
-        <View style={styles.historyContainer}>
-          {history.map((res, index) => (
-            <View 
-              key={index} 
-              style={[
-                styles.historyDot, 
-                res === 'TAI' ? styles.historyDotTai : styles.historyDotXiu
-              ]} 
-            />
-          ))}
-        </View>
-
-        {/* ROW CHIPS */}
-        <View style={styles.chipsWrapper}>
-          <View style={styles.chipsContainer}>
-            {CHIPS.map((chip, index) => (
-              <TouchableOpacity 
-                key={index} 
-                style={styles.chipButton}
-                onPress={() => handleAddChip(chip.value)}
-              >
-                <Text style={styles.chipText}>{chip.label}</Text>
+            {/* BOTTOM ACTION BUTTONS */}
+            <View style={styles.actionRow}>
+              <TouchableOpacity style={[styles.actionBtn, styles.allInBtn]} onPress={handleAllIn}>
+                <Text style={styles.actionBtnText}>ALL-IN</Text>
               </TouchableOpacity>
-            ))}
-          </View>
-        </View>
 
-        {/* BOTTOM ACTION BUTTONS */}
-        <View style={styles.actionRow}>
-          <TouchableOpacity style={[styles.actionBtn, styles.allInBtn]} onPress={handleAllIn}>
-            <Text style={styles.actionBtnText}>ALL-IN</Text>
-          </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.actionBtn, styles.confirmBtn, gamePhase === 'RESULT' && { opacity: 0.5 }]} 
+                onPress={handleConfirmBet}
+              >
+                <Text style={styles.confirmBtnText}>ĐẶT CƯỢC</Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.actionBtn, styles.confirmBtn]} onPress={handleConfirmBet}>
-            <Text style={styles.confirmBtnText}>ĐẶT CƯỢC</Text>
-          </TouchableOpacity>
+              <TouchableOpacity style={[styles.actionBtn, styles.cancelBtn]} onPress={handleCancelBet}>
+                <Text style={styles.actionBtnText}>HỦY</Text>
+              </TouchableOpacity>
+            </View>
 
-          <TouchableOpacity style={[styles.actionBtn, styles.cancelBtn]} onPress={handleCancelBet}>
-            <Text style={styles.actionBtnText}>HỦY</Text>
-          </TouchableOpacity>
-        </View>
-
+        </ScrollView>
       </View>
     </Modal>
   );

@@ -7,16 +7,59 @@ import {
   TouchableOpacity, 
   KeyboardAvoidingView, 
   Platform,
-  SafeAreaView
+  SafeAreaView,
+  Alert,
+  ScrollView
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../services/api';
 
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
-    // Chuyển sang màn Main (chứa Tab/Drawer) khi bấm đăng nhập
-    navigation.replace('Main');
+  const showAlert = (title, message) => {
+    if (Platform.OS === 'web') {
+      window.alert(title + ': ' + message);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
+  const handleLogin = async () => {
+    if (!username || !password) {
+      showAlert('Lỗi', 'Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!');
+      return;
+    }
+    
+    try {
+      // Gọi API đến json-server để tìm user (chỉ query username để tránh lỗi ép kiểu trên json-server)
+      const response = await api.get(`/users?username=${username}`);
+      
+      if (response.data && response.data.length > 0) {
+        const user = response.data[0];
+        
+        // Kiểm tra mật khẩu ở Client
+        if (user.password === password) {
+          // Lưu user vào AsyncStorage
+          await AsyncStorage.setItem('logged_in_user', JSON.stringify(user));
+
+          // Đăng nhập thành công, kiểm tra role
+          if (user.role === 'ADMIN') {
+            navigation.replace('Admin', { user });
+          } else {
+            navigation.replace('Main', { user });
+          }
+        } else {
+          showAlert('Lỗi đăng nhập', 'Tên đăng nhập hoặc mật khẩu không đúng!');
+        }
+      } else {
+        showAlert('Lỗi đăng nhập', 'Tên đăng nhập hoặc mật khẩu không đúng!');
+      }
+    } catch (error) {
+      console.error(error);
+      showAlert('Lỗi hệ thống', 'Không thể kết nối đến máy chủ. Hãy đảm bảo Server đang chạy.');
+    }
   };
 
   return (
@@ -25,53 +68,55 @@ export default function LoginScreen({ navigation }) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        {/* Tiêu đề mang phong cách Casino / Tài xỉu */}
-        <View style={styles.headerContainer}>
-          <Text style={styles.title}>TÀI XỈU</Text>
-          <Text style={styles.subtitle}>SIC BO CASINO</Text>
-        </View>
-
-        {/* Form đăng nhập */}
-        <View style={styles.formContainer}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Tên Đăng Nhập</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Nhập tên đăng nhập"
-              placeholderTextColor="#A07855"
-              value={username}
-              onChangeText={setUsername}
-              autoCapitalize="none"
-            />
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* Tiêu đề mang phong cách Casino / Tài xỉu */}
+          <View style={styles.headerContainer}>
+            <Text style={styles.title}>TÀI XỈU</Text>
+            <Text style={styles.subtitle}>SIC BO CASINO</Text>
           </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Mật Khẩu</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Nhập mật khẩu"
-              placeholderTextColor="#A07855"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-          </View>
+          {/* Form đăng nhập */}
+          <View style={styles.formContainer}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Tên Đăng Nhập</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Nhập tên đăng nhập"
+                placeholderTextColor="#A07855"
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+              />
+            </View>
 
-          <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
-          </TouchableOpacity>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Mật Khẩu</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Nhập mật khẩu"
+                placeholderTextColor="#A07855"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+            </View>
 
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginButtonText}>ĐĂNG NHẬP</Text>
-          </TouchableOpacity>
-
-          <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>Chưa có tài khoản? </Text>
-            <TouchableOpacity>
-              <Text style={styles.registerLink}>Đăng ký ngay</Text>
+            <TouchableOpacity style={styles.forgotPassword}>
+              <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+              <Text style={styles.loginButtonText}>ĐĂNG NHẬP</Text>
+            </TouchableOpacity>
+
+            <View style={styles.registerContainer}>
+              <Text style={styles.registerText}>Chưa có tài khoản? </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+                <Text style={styles.registerLink}>Đăng ký ngay</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -84,8 +129,12 @@ const styles = StyleSheet.create({
   },
   keyboardView: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     padding: 20,
+    paddingVertical: 40,
   },
   headerContainer: {
     alignItems: 'center',

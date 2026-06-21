@@ -25,6 +25,25 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   
+  scrollContent: {
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  globalCloseBtn: {
+    position: 'absolute',
+    top: 15,
+    right: 30,
+    backgroundColor: COLORS.brownDark,
+    borderColor: COLORS.gold,
+    borderWidth: 2,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 50,
+  },
+  
   // Header / Title (TÀI XỈU)
   headerContainer: {
     alignItems: 'center',
@@ -32,24 +51,41 @@ export const styles = StyleSheet.create({
     zIndex: 10,
   },
   titleText: {
-    fontSize: 40,
+    fontSize: 24,
     fontWeight: '900',
     color: '#FFF',
     textShadowColor: COLORS.gold,
     textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 10,
+    textShadowRadius: 5,
     letterSpacing: 2,
   },
   timerText: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: 'bold',
     backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 20,
-    paddingVertical: 5,
+    paddingHorizontal: 15,
+    paddingVertical: 2,
     borderRadius: 15,
-    marginTop: 5,
     borderWidth: 1,
     borderColor: COLORS.gold,
+  },
+  headerInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 5,
+  },
+  balanceText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#D4AF37',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#D4AF37',
   },
   sessionText: {
     color: COLORS.goldLight,
@@ -61,38 +97,22 @@ export const styles = StyleSheet.create({
     marginTop: 5,
   },
 
-  // Main Board
   boardContainer: {
     width: width * 0.95,
     backgroundColor: COLORS.brownBoard,
-    borderRadius: 25,
+    borderRadius: 20,
     borderWidth: 3,
     borderColor: COLORS.gold,
-    padding: 15,
-    paddingTop: 30,
+    padding: 5,
+    paddingTop: 15,
     shadowColor: COLORS.gold,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
-    shadowRadius: 15,
-    elevation: 10,
+    shadowRadius: 10,
+    elevation: 5,
     position: 'relative',
   },
 
-  // Nút tắt
-  closeButton: {
-    position: 'absolute',
-    top: -15,
-    right: -5,
-    backgroundColor: COLORS.brownDark,
-    borderColor: COLORS.gold,
-    borderWidth: 2,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 20,
-  },
   closeButtonText: {
     color: '#FFF',
     fontSize: 18,
@@ -107,17 +127,16 @@ export const styles = StyleSheet.create({
     marginTop: 10,
   },
 
-  // Panel TÀI / XỈU
   doorPanel: {
     flex: 1,
     backgroundColor: COLORS.brownPanel,
-    borderRadius: 20,
+    borderRadius: 15,
     borderWidth: 2,
     borderColor: COLORS.goldDark,
     paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'space-between',
-    height: 160,
+    minHeight: 80,
   },
   doorPanelActive: {
     borderColor: COLORS.goldLight,
@@ -130,12 +149,12 @@ export const styles = StyleSheet.create({
     elevation: 5,
   },
   doorTitle: {
-    fontSize: 48,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '900',
     textShadowColor: COLORS.gold,
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
-    marginBottom: 5,
+    marginBottom: 2,
   },
   doorTitleTai: {
     color: '#000000', // Đen cho TÀI
@@ -151,12 +170,12 @@ export const styles = StyleSheet.create({
   doorTotalBet: {
     backgroundColor: COLORS.redDark,
     width: '90%',
-    paddingVertical: 5,
+    paddingVertical: 2,
     borderRadius: 15,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.goldDark,
-    marginBottom: 5,
+    marginBottom: 2,
   },
   doorTotalBetText: {
     color: '#FFF',
@@ -166,7 +185,7 @@ export const styles = StyleSheet.create({
   doorMyBet: {
     backgroundColor: COLORS.brownDark,
     width: '80%',
-    paddingVertical: 4,
+    paddingVertical: 2,
     borderRadius: 10,
     alignItems: 'center',
     borderWidth: 1,
@@ -174,14 +193,14 @@ export const styles = StyleSheet.create({
   },
   doorMyBetText: {
     color: COLORS.gold,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: 'bold',
   },
 
   // Khu vực Xúc xắc ở giữa
   diceCenterContainer: {
-    width: 100,
-    height: 100,
+    width: 70,
+    height: 70,
     backgroundColor: 'rgba(0,0,0,0.8)',
     borderRadius: 50,
     borderWidth: 3,
@@ -200,11 +219,11 @@ export const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     alignItems: 'center',
-    width: 80,
-    height: 80,
+    width: 60,
+    height: 60,
   },
   diceEmoji: {
-    fontSize: 32,
+    fontSize: 24,
     margin: -2,
     color: '#FFFFFF', // Thêm màu trắng để hiển thị rõ ký tự Unicode xúc xắc trên nền đen
   },
@@ -212,38 +231,39 @@ export const styles = StyleSheet.create({
   // Total bet highlight center
   centerBetHighlight: {
     position: 'absolute',
-    bottom: -20,
+    bottom: -12,
     backgroundColor: COLORS.redDark,
     borderWidth: 1,
     borderColor: COLORS.gold,
-    paddingHorizontal: 15,
-    paddingVertical: 5,
-    borderRadius: 15,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    minWidth: 80,
+    alignItems: 'center',
   },
   centerBetText: {
     color: '#FFF',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 10,
   },
 
-  // Lịch sử phiên chơi
   historyContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#1C0B02', // Màu nền thanh lịch sử (đen mờ)
-    paddingVertical: 8,
+    paddingVertical: 4,
     paddingHorizontal: 15,
     borderRadius: 25,
-    marginTop: 20,
+    marginTop: 15,
     borderWidth: 1.5,
     borderColor: COLORS.gold,
     width: width * 0.95,
   },
   historyDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     marginHorizontal: 4,
     borderWidth: 1.5,
     borderColor: COLORS.goldDark,
@@ -262,7 +282,7 @@ export const styles = StyleSheet.create({
 
   // Hàng nút Chips
   chipsWrapper: {
-    marginTop: 15,
+    marginTop: 5,
     width: width * 0.95,
   },
   chipsContainer: {
@@ -275,7 +295,7 @@ export const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: COLORS.gold,
     borderRadius: 8,
-    paddingVertical: 8,
+    paddingVertical: 5,
     paddingHorizontal: 5,
     alignItems: 'center',
     minWidth: 40,
@@ -296,10 +316,10 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     width: width * 0.95,
-    marginTop: 20,
+    marginTop: 5,
   },
   actionBtn: {
-    paddingVertical: 12,
+    paddingVertical: 8,
     borderRadius: 25,
     borderWidth: 2,
     alignItems: 'center',
@@ -329,13 +349,13 @@ export const styles = StyleSheet.create({
   actionBtnText: {
     color: '#FFF',
     fontWeight: '900',
-    fontSize: 16,
+    fontSize: 14,
     letterSpacing: 1,
   },
   confirmBtnText: {
     color: COLORS.brownDark,
     fontWeight: '900',
-    fontSize: 18,
+    fontSize: 14,
     letterSpacing: 1,
   }
 });

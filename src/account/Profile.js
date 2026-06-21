@@ -1,12 +1,14 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ProfileScreen({ navigation }) {
-  const handleLogout = () => {
-    // Thay vì dùng navigation.replace, ở đây ta có thể dùng reset hoặc tùy cấu trúc
-    // Giả sử có Stack.Navigator bọc bên ngoài tên 'Login'
-    if (navigation && navigation.replace) {
-      navigation.replace('Login');
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('logged_in_user');
+      navigation.navigate('Login');
+    } catch (error) {
+      console.log('Logout error:', error);
     }
   };
 
