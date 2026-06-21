@@ -1,12 +1,16 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, 
   Text, 
   View, 
   FlatList, 
   TouchableOpacity,
-  SafeAreaView
+  SafeAreaView,
+  Alert
 } from 'react-native';
+
+// Import Sic Bo Game
+import SicBoModal from '../games/SicBo/SicBoModal';
 
 const GAMES = [
   { id: '1', title: 'TÀI XỈU', subtitle: 'SIC BO CLASSIC', color: '#8B0000', icon: '🎲' },
@@ -16,8 +20,53 @@ const GAMES = [
 ];
 
 export default function HomeScreen() {
+  const [balance, setBalance] = useState(10000000);
+  
+  // States for Sic Bo Game
+  const [isSicBoVisible, setIsSicBoVisible] = useState(false);
+
+  // States for Global Game Loop
+  const [timeLeft, setTimeLeft] = useState(60);
+  const [gamePhase, setGamePhase] = useState('BETTING'); // 'BETTING' | 'RESULT'
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          if (gamePhase === 'BETTING') {
+            setGamePhase('RESULT');
+            return 5; // 5 giây xem kết quả
+          } else {
+            setGamePhase('BETTING');
+            return 60; // 60 giây đặt cược mới
+          }
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [gamePhase]);
+
+  const handlePlayGame = (gameId) => {
+    if (gameId === '1') {
+      setIsSicBoVisible(true);
+    } else {
+      Alert.alert("Thông báo", "Game này đang trong quá trình phát triển!");
+    }
+  };
+
+  const handleSicBoBetSuccess = (amount, choice) => {
+    // Trừ tiền
+    setBalance(prev => prev - amount);
+    Alert.alert("Thành công", `Đã đặt cược ${amount.toLocaleString('vi-VN')} đ vào cửa ${choice === 'TAI' ? 'TÀI' : 'XỈU'}!`);
+  };
+
   const renderGameCard = ({ item }) => (
-    <TouchableOpacity style={[styles.card, { backgroundColor: item.color }]}>
+    <TouchableOpacity 
+      style={[styles.card, { backgroundColor: item.color }]}
+      onPress={() => handlePlayGame(item.id)}
+    >
       <View style={styles.cardContent}>
         <Text style={styles.cardIcon}>{item.icon}</Text>
         <View style={styles.cardTextContainer}>
@@ -35,7 +84,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.greeting}>Xin chào, Người chơi!</Text>
-        <Text style={styles.balance}>Số dư: <Text style={styles.balanceAmount}>10,000,000 đ</Text></Text>
+        <Text style={styles.balance}>Số dư: <Text style={styles.balanceAmount}>{balance.toLocaleString('vi-VN')} đ</Text></Text>
       </View>
 
       <Text style={styles.sectionTitle}>CÁC TRÒ CHƠI HẤP DẪN</Text>
@@ -47,6 +96,17 @@ export default function HomeScreen() {
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
       />
+
+      {/* SIC BO OVERLAY MODAL */}
+      <SicBoModal 
+        visible={isSicBoVisible} 
+        onClose={() => setIsSicBoVisible(false)} 
+        balance={balance}
+        onBetSuccess={handleSicBoBetSuccess}
+        timeLeft={timeLeft}
+        gamePhase={gamePhase}
+      />
+
     </SafeAreaView>
   );
 }
