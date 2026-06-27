@@ -18,6 +18,7 @@ const GAMES = [
   { id: '2', title: 'BẦU CUA', subtitle: 'TÔM CÁ', color: '#D2691E', icon: '🦀' },
   { id: '3', title: 'ROULETTE', subtitle: 'VÒNG QUAY MAY MẮN', color: '#006400', icon: '🎡' },
   { id: '4', title: 'POKER', subtitle: 'TEXAS HOLDEM', color: '#4B0082', icon: '🃏' },
+  { id: '5', title: 'MÁY BAY', subtitle: 'CHUYẾN BAY MẠO HIỂM', color: '#16213e', icon: '✈️' },
 ];
 
 export default function HomeScreen({ navigation, route }) {
@@ -63,9 +64,12 @@ export default function HomeScreen({ navigation, route }) {
     return () => clearInterval(timer);
   }, [gamePhase]);
 
-  const handlePlayGame = (gameId) => {
+const handlePlayGame = (gameId) => {
     if (gameId === '1') {
       setIsSicBoVisible(true);
+    } else if (gameId === '5') {
+      // Điều hướng sang màn hình CrashGame và truyền kèm dữ liệu user, số dư
+      navigation.navigate('CrashGame', { user: user, currentBalance: balance });
     } else {
       Alert.alert("Thông báo", "Game này đang trong quá trình phát triển!");
     }

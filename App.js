@@ -9,6 +9,7 @@ import LoginScreen from './src/authentication/Login';
 import RegisterScreen from './src/authentication/Register';
 import MainNavigator from './src/navigation/MainNavigator';
 import AdminScreen from './src/admin/AdminScreen';
+import CrashGameScreen from './src/games/CrashGame/CrashGameScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -56,6 +57,7 @@ export default function App() {
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="Main" component={MainNavigator} initialParams={initialParams} />
         <Stack.Screen name="Admin" component={AdminScreen} initialParams={initialParams} />
+        <Stack.Screen name="CrashGame" component={CrashGameScreen} />
       </Stack.Navigator>
       <StatusBar style="light" />
     </NavigationContainer>
