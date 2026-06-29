@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -6,9 +6,14 @@ import {
   FlatList, 
   TouchableOpacity,
   SafeAreaView,
-  Alert
+  Alert,
+  Animated,
+  Easing,
+  Modal
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import api from '../services/api';
 
 // Import Sic Bo Game
 import SicBoModal from '../games/SicBo/SicBoModal';
@@ -30,6 +35,30 @@ export default function HomeScreen({ navigation, route }) {
   // States for Sic Bo Game
   const [isSicBoVisible, setIsSicBoVisible] = useState(false);
 
+  const [placedBetTai, _setPlacedBetTai] = useState(0);
+  const [placedBetXiu, _setPlacedBetXiu] = useState(0);
+  
+  const placedBetTaiRef = useRef(0);
+  const placedBetXiuRef = useRef(0);
+
+  const setPlacedBetTai = (val) => {
+    const newVal = typeof val === 'function' ? val(placedBetTaiRef.current) : val;
+    placedBetTaiRef.current = newVal;
+    _setPlacedBetTai(newVal);
+  };
+
+  const setPlacedBetXiu = (val) => {
+    const newVal = typeof val === 'function' ? val(placedBetXiuRef.current) : val;
+    placedBetXiuRef.current = newVal;
+    _setPlacedBetXiu(newVal);
+  };
+
+  const [rewardRatio, setRewardRatio] = useState(1.8);
+  const [winAmount, setWinAmount] = useState(0);
+  const [showWinAnim, setShowWinAnim] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const floatAnim = useRef(new Animated.Value(0)).current;
+
   // States for Global Game Loop
   const [timeLeft, setTimeLeft] = useState(60);
   const [gamePhase, setGamePhase] = useState('BETTING'); // 'BETTING' | 'RESULT'
@@ -45,6 +74,20 @@ export default function HomeScreen({ navigation, route }) {
   };
 
   useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const res = await api.get('/system_configs?key=REWARD_RATIO_TAI_XIU');
+        if (res.data && res.data.length > 0) {
+          setRewardRatio(parseFloat(res.data[0].value) || 1.8);
+        }
+      } catch (e) {
+        console.log('Fetch config error:', e);
+      }
+    };
+    fetchConfig();
+  }, []);
+
+  useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
@@ -53,6 +96,8 @@ export default function HomeScreen({ navigation, route }) {
             return 5; // 5 giây xem kết quả
           } else {
             setGamePhase('BETTING');
+            setPlacedBetTai(0);
+            setPlacedBetXiu(0);
             return 60; // 60 giây đặt cược mới
           }
         }
@@ -71,10 +116,92 @@ export default function HomeScreen({ navigation, route }) {
     }
   };
 
+  const updateBalance = (amountChange) => {
+    setBalance(prev => {
+      const newBalance = prev + amountChange;
+      if (user && user.id) {
+        const saveBalance = async () => {
+          try {
+            const updatedUser = { ...user, balance: newBalance };
+            await AsyncStorage.setItem('logged_in_user', JSON.stringify(updatedUser));
+            await api.patch(`/users/${user.id}`, { balance: newBalance });
+          } catch (error) {
+            console.log('Update balance error:', error);
+          }
+        };
+        saveBalance();
+      }
+      return newBalance;
+    });
+  };
+
   const handleSicBoBetSuccess = (amount, choice) => {
-    // Trừ tiền
-    setBalance(prev => prev - amount);
+    updateBalance(-amount);
+    
+    if (choice === 'TAI') {
+      setPlacedBetTai(prev => prev + amount);
+    } else {
+      setPlacedBetXiu(prev => prev + amount);
+    }
     Alert.alert("Thành công", `Đã đặt cược ${amount.toLocaleString('vi-VN')} đ vào cửa ${choice === 'TAI' ? 'TÀI' : 'XỈU'}!`);
+  };
+
+  const handleCancelPlacedBets = () => {
+    const totalPlaced = placedBetTaiRef.current + placedBetXiuRef.current;
+    if (totalPlaced > 0) {
+      updateBalance(totalPlaced);
+      setPlacedBetTai(0);
+      setPlacedBetXiu(0);
+      Alert.alert("Thành công", `Đã hoàn lại ${totalPlaced.toLocaleString('vi-VN')} đ tiền cược!`);
+    } else {
+      Alert.alert("Thông báo", "Bạn chưa đặt cược trong phiên này!");
+    }
+  };
+
+  const triggerWinAnimation = (amount) => {
+    setWinAmount(amount);
+    setShowWinAnim(true);
+    fadeAnim.setValue(1);
+    floatAnim.setValue(0);
+
+    Animated.parallel([
+      Animated.timing(floatAnim, {
+        toValue: -150,
+        duration: 3000,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 2500,
+        delay: 500,
+        useNativeDriver: true,
+      })
+    ]).start(() => {
+      setShowWinAnim(false);
+    });
+  };
+
+  const handleGameResult = (resultText) => {
+    const currentBetTai = placedBetTaiRef.current;
+    const currentBetXiu = placedBetXiuRef.current;
+    
+    console.log(`[DEBUG] handleGameResult: resultText=${resultText}, placedBetTai=${currentBetTai}, placedBetXiu=${currentBetXiu}`);
+    let reward = 0;
+    if (resultText === 'TAI' && currentBetTai > 0) {
+      reward = currentBetTai * rewardRatio;
+    } else if (resultText === 'XIU' && currentBetXiu > 0) {
+      reward = currentBetXiu * rewardRatio;
+    }
+
+    console.log(`[DEBUG] handleGameResult: reward=${reward}`);
+
+    if (reward > 0) {
+      updateBalance(reward);
+      triggerWinAnimation(reward);
+      // Hiển thị thêm Alert vì Modal đang mở có thể che mất hiệu ứng cộng tiền
+      Alert.alert("🎉 Chúc mừng 🎉", `Bạn đã thắng cược và nhận được ${reward.toLocaleString('vi-VN')} đ!`);
+    }
   };
 
   const renderGameCard = ({ item }) => (
@@ -127,13 +254,47 @@ export default function HomeScreen({ navigation, route }) {
         onBetSuccess={handleSicBoBetSuccess}
         timeLeft={timeLeft}
         gamePhase={gamePhase}
+        placedBetTai={placedBetTai}
+        placedBetXiu={placedBetXiu}
+        onCancelPlacedBets={handleCancelPlacedBets}
+        onResult={handleGameResult}
       />
+
+      {/* Hiệu ứng cộng tiền bọc trong Modal để nằm đè lên SicBoModal */}
+      <Modal visible={showWinAnim} transparent={true} animationType="none">
+        <Animated.View style={[
+          styles.winAnimContainer,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: floatAnim }]
+          }
+        ]} pointerEvents="none">
+          <Text style={styles.winAnimText}>+{winAmount.toLocaleString('vi-VN')} đ</Text>
+        </Animated.View>
+      </Modal>
 
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  winAnimContainer: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 9999,
+  },
+  winAnimText: {
+    color: '#00FF00',
+    fontSize: 40,
+    fontWeight: '900',
+    textShadowColor: 'rgba(0, 0, 0, 0.9)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10,
+  },
   container: {
     flex: 1,
     backgroundColor: '#1E0505',
