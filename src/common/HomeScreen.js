@@ -150,7 +150,7 @@ export default function HomeScreen({ navigation, route }) {
     } else {
       setPlacedBetXiu(prev => prev + amount);
     }
-    showAlert("Thành công", `Đã đặt cược ${amount.toLocaleString('vi-VN')} đ vào cửa ${choice === 'TAI' ? 'TÀI' : 'XỈU'}!`);
+    // Đã gỡ bỏ thông báo đặt cược thành công để người chơi cược liên tục không bị ngắt quãng
   };
 
   const handleCancelPlacedBets = () => {
