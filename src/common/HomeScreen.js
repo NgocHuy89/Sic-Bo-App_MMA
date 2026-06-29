@@ -5,18 +5,19 @@ import {
   View, 
   FlatList, 
   TouchableOpacity,
-  SafeAreaView,
   Alert,
   Animated,
   Easing,
   Modal
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import api from '../services/api';
 
 // Import Sic Bo Game
 import SicBoModal from '../games/SicBo/SicBoModal';
+import CustomAlert from './CustomAlert';
 
 const GAMES = [
   { id: '1', title: 'TÀI XỈU', subtitle: 'SIC BO CLASSIC', color: '#8B0000', icon: '🎲' },
@@ -34,6 +35,12 @@ export default function HomeScreen({ navigation, route }) {
   
   // States for Sic Bo Game
   const [isSicBoVisible, setIsSicBoVisible] = useState(false);
+
+  const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '' });
+
+  const showAlert = (title, message) => {
+    setAlertConfig({ visible: true, title, message });
+  };
 
   const [placedBetTai, _setPlacedBetTai] = useState(0);
   const [placedBetXiu, _setPlacedBetXiu] = useState(0);
@@ -112,7 +119,7 @@ export default function HomeScreen({ navigation, route }) {
     if (gameId === '1') {
       setIsSicBoVisible(true);
     } else {
-      Alert.alert("Thông báo", "Game này đang trong quá trình phát triển!");
+      showAlert("Thông báo", "Game này đang trong quá trình phát triển!");
     }
   };
 
@@ -143,7 +150,7 @@ export default function HomeScreen({ navigation, route }) {
     } else {
       setPlacedBetXiu(prev => prev + amount);
     }
-    Alert.alert("Thành công", `Đã đặt cược ${amount.toLocaleString('vi-VN')} đ vào cửa ${choice === 'TAI' ? 'TÀI' : 'XỈU'}!`);
+    showAlert("Thành công", `Đã đặt cược ${amount.toLocaleString('vi-VN')} đ vào cửa ${choice === 'TAI' ? 'TÀI' : 'XỈU'}!`);
   };
 
   const handleCancelPlacedBets = () => {
@@ -152,9 +159,9 @@ export default function HomeScreen({ navigation, route }) {
       updateBalance(totalPlaced);
       setPlacedBetTai(0);
       setPlacedBetXiu(0);
-      Alert.alert("Thành công", `Đã hoàn lại ${totalPlaced.toLocaleString('vi-VN')} đ tiền cược!`);
+      showAlert("Thành công", `Đã hoàn lại ${totalPlaced.toLocaleString('vi-VN')} đ tiền cược!`);
     } else {
-      Alert.alert("Thông báo", "Bạn chưa đặt cược trong phiên này!");
+      showAlert("Thông báo", "Bạn chưa đặt cược trong phiên này!");
     }
   };
 
@@ -199,8 +206,7 @@ export default function HomeScreen({ navigation, route }) {
     if (reward > 0) {
       updateBalance(reward);
       triggerWinAnimation(reward);
-      // Hiển thị thêm Alert vì Modal đang mở có thể che mất hiệu ứng cộng tiền
-      Alert.alert("🎉 Chúc mừng 🎉", `Bạn đã thắng cược và nhận được ${reward.toLocaleString('vi-VN')} đ!`);
+      // Đã ẩn Alert chúc mừng theo yêu cầu, chỉ dùng hiệu ứng cộng tiền nổi lên
     }
   };
 
@@ -273,6 +279,12 @@ export default function HomeScreen({ navigation, route }) {
         </Animated.View>
       </Modal>
 
+      <CustomAlert 
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+      />
     </SafeAreaView>
   );
 }

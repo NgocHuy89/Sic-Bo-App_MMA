@@ -12,6 +12,7 @@ import {
 import { FontAwesome5 } from '@expo/vector-icons';
 import { styles } from './SicBoStyles';
 import api from '../../services/api';
+import CustomAlert from '../../common/CustomAlert';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -34,6 +35,12 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
   const DICE_FACES = ['dice-one', 'dice-two', 'dice-three', 'dice-four', 'dice-five', 'dice-six'];
   const [diceResults, setDiceResults] = useState(['dice-one', 'dice-three', 'dice-five']);
   const evaluatedPhase = useRef(null);
+
+  const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '' });
+
+  const showAlert = (title, message) => {
+    setAlertConfig({ visible: true, title, message });
+  };
 
   const pos1 = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const pos2 = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
@@ -70,7 +77,7 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
           toValue: { x: randomX, y: randomY },
           duration: 150 + Math.random() * 150, 
           easing: Easing.linear,
-          useNativeDriver: false
+          useNativeDriver: true
         }).start(({ finished }) => {
           if (finished && animActive) animatePos(posAnim);
         });
@@ -83,7 +90,7 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
             toValue: 1,
             duration: duration,
             easing: Easing.linear,
-            useNativeDriver: false
+            useNativeDriver: true
           })
         ).start();
       };
@@ -144,12 +151,12 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
             Animated.timing(targetAnim, {
               toValue: 1.1,
               duration: 400,
-              useNativeDriver: true,
+              useNativeDriver: false,
             }),
             Animated.timing(targetAnim, {
               toValue: 1,
               duration: 400,
-              useNativeDriver: true,
+              useNativeDriver: false,
             })
           ])
         ).start();
@@ -220,7 +227,7 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
 
   const handleCancelBet = () => {
     if (gamePhase === 'RESULT') {
-      Alert.alert("Thông báo", "Đã hết thời gian hủy cược!");
+      showAlert("Thông báo", "Đã hết thời gian hủy cược!");
       return;
     }
     setBetAmount(0);
@@ -233,19 +240,19 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
 
   const handleConfirmBet = () => {
     if (gamePhase === 'RESULT') {
-      Alert.alert("Thông báo", "Đã hết thời gian đặt cược, vui lòng đợi phiên tiếp theo!");
+      showAlert("Thông báo", "Đã hết thời gian đặt cược, vui lòng đợi phiên tiếp theo!");
       return;
     }
     if (!betChoice) {
-      Alert.alert("Lỗi", "Vui lòng chọn cửa cược (TÀI hoặc XỈU)!");
+      showAlert("Lỗi", "Vui lòng chọn cửa cược (TÀI hoặc XỈU)!");
       return;
     }
     if (betAmount <= 0) {
-      Alert.alert("Lỗi", "Vui lòng đặt cược số tiền hợp lệ!");
+      showAlert("Lỗi", "Vui lòng đặt cược số tiền hợp lệ!");
       return;
     }
     if (betAmount > balance) {
-      Alert.alert("Lỗi", "Số dư không đủ để đặt cược!");
+      showAlert("Lỗi", "Số dư không đủ để đặt cược!");
       return;
     }
     
@@ -395,8 +402,13 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
                 <Text style={styles.actionBtnText}>HỦY</Text>
               </TouchableOpacity>
             </View>
-
         </ScrollView>
+        <CustomAlert 
+          visible={alertConfig.visible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+        />
       </View>
     </Modal>
   );

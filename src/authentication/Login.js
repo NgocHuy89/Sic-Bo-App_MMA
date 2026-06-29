@@ -7,23 +7,22 @@ import {
   TouchableOpacity, 
   KeyboardAvoidingView, 
   Platform,
-  SafeAreaView,
   Alert,
   ScrollView
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../services/api';
+import CustomAlert from '../common/CustomAlert';
 
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
+  const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '' });
+
   const showAlert = (title, message) => {
-    if (Platform.OS === 'web') {
-      window.alert(title + ': ' + message);
-    } else {
-      Alert.alert(title, message);
-    }
+    setAlertConfig({ visible: true, title, message });
   };
 
   const handleLogin = async () => {
@@ -118,6 +117,12 @@ export default function LoginScreen({ navigation }) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <CustomAlert 
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+      />
     </SafeAreaView>
   );
 }

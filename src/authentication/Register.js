@@ -7,11 +7,12 @@ import {
   TouchableOpacity, 
   KeyboardAvoidingView, 
   Platform,
-  SafeAreaView,
   Alert,
   ScrollView
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../services/api';
+import CustomAlert from '../common/CustomAlert';
 
 export default function RegisterScreen({ navigation }) {
   const [username, setUsername] = useState('');
@@ -19,15 +20,10 @@ export default function RegisterScreen({ navigation }) {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
 
-  const showAlert = (title, message, buttons) => {
-    if (Platform.OS === 'web') {
-      window.alert(title + ': ' + message);
-      if (buttons && buttons.length > 0 && buttons[0].onPress) {
-        buttons[0].onPress();
-      }
-    } else {
-      Alert.alert(title, message, buttons);
-    }
+  const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '', buttons: [] });
+
+  const showAlert = (title, message, buttons = []) => {
+    setAlertConfig({ visible: true, title, message, buttons });
   };
 
   const handleRegister = async () => {
@@ -143,6 +139,13 @@ export default function RegisterScreen({ navigation }) {
 
         </ScrollView>
       </KeyboardAvoidingView>
+      <CustomAlert 
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        buttons={alertConfig.buttons}
+        onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+      />
     </SafeAreaView>
   );
 }
