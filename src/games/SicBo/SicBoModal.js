@@ -314,13 +314,22 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
                 <View style={styles.diceCenterContainer}>
                   <View style={styles.diceIconGroup}>
                     <Animated.View style={[{ position: 'absolute', transform: getTransform(pos1, rot1) }]}>
-                      <FontAwesome5 name={diceResults[0]} size={32} color="#FFFFFF" solid />
+                      <View style={{ width: 28, height: 28, borderRadius: 8, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
+                        <View style={{ position: 'absolute', width: '100%', height: '100%', backgroundColor: diceResults[0] === 'dice-one' ? '#D31A1A' : '#000000' }} />
+                        <FontAwesome5 name={diceResults[0]} size={35} color="#FFFFFF" solid style={{ position: 'absolute' }} />
+                      </View>
                     </Animated.View>
                     <Animated.View style={[{ position: 'absolute', transform: getTransform(pos2, rot2) }]}>
-                      <FontAwesome5 name={diceResults[1]} size={32} color="#FFFFFF" solid />
+                      <View style={{ width: 28, height: 28, borderRadius: 8, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
+                        <View style={{ position: 'absolute', width: '100%', height: '100%', backgroundColor: diceResults[1] === 'dice-one' ? '#D31A1A' : '#000000' }} />
+                        <FontAwesome5 name={diceResults[1]} size={35} color="#FFFFFF" solid style={{ position: 'absolute' }} />
+                      </View>
                     </Animated.View>
                     <Animated.View style={[{ position: 'absolute', transform: getTransform(pos3, rot3) }]}>
-                      <FontAwesome5 name={diceResults[2]} size={32} color="#FFFFFF" solid />
+                      <View style={{ width: 28, height: 28, borderRadius: 8, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
+                        <View style={{ position: 'absolute', width: '100%', height: '100%', backgroundColor: diceResults[2] === 'dice-one' ? '#D31A1A' : '#000000' }} />
+                        <FontAwesome5 name={diceResults[2]} size={35} color="#FFFFFF" solid style={{ position: 'absolute' }} />
+                      </View>
                     </Animated.View>
                   </View>
                   {betAmount > 0 && (

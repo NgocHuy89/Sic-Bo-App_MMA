@@ -1,26 +1,35 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
-// LƯU Ý: Bạn CẦN thay đổi IP này thành địa chỉ IPv4 máy tính của bạn
-// Ví dụ: 192.168.1.14 (Mở cmd và gõ ipconfig để xem IPv4 Address)
-// Không dùng 'localhost' nếu chạy trên máy ảo/điện thoại thật
-import { Platform, NativeModules } from 'react-native';
-
-let BASE_URL = 'http://localhost:3000'; // Mặc định an toàn cho máy ảo
+let BASE_URL = 'http://localhost:3000'; // Mặc định an toàn
 
 if (Platform.OS === 'web') {
-  // Trên web, tự động lấy IP của trình duyệt
   BASE_URL = `http://${window.location.hostname}:3000`;
 } else {
-  // Lấy trực tiếp địa chỉ IP mà app đã dùng để tải Javascript 
-  const scriptURL = NativeModules.SourceCode.scriptURL;
-  if (scriptURL) {
-    // Tách lấy dải IP từ chuỗi (VD: http://192.168.1.15:8081/... -> 192.168.1.15)
-    const match = scriptURL.match(/^https?:\/\/([^:/]+)/);
-    if (match) {
-      const ipAddress = match[1];
+  // Ở các phiên bản Expo mới, NativeModules.SourceCode.scriptURL có thể bị undefined
+  // Chúng ta chuyển sang dùng Constants.expoConfig.hostUri (chuẩn Expo)
+  const hostUri = Constants?.expoConfig?.hostUri;
+  
+  console.log("=== DEBUG API ===");
+  console.log("Host URI từ Expo:", hostUri);
+
+  if (hostUri) {
+    let ipAddress = hostUri.match(/^([^:]+)/)?.[1];
+    
+    if (ipAddress) {
+      if ((ipAddress === 'localhost' || ipAddress === '127.0.0.1') && Platform.OS === 'android') {
+        ipAddress = '10.0.2.2';
+      }
       BASE_URL = `http://${ipAddress}:3000`;
     }
+  } else if (Platform.OS === 'android') {
+    // Nếu hostUri vẫn undefined và đang chạy Android, ép cứng IP cho máy ảo làm phương án dự phòng
+    BASE_URL = 'http://10.0.2.2:3000';
   }
+
+  console.log("Resolved BASE_URL:", BASE_URL);
+  console.log("=================");
 }
 
 
