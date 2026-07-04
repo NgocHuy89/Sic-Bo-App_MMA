@@ -139,7 +139,7 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
         console.log(`[DEBUG] SicBoModal: Generated resultText=${resultText}, onResult is defined: ${!!onResult}`);
         setHistory(prev => {
           const newHist = [...prev, resultText];
-          if (newHist.length > 14) newHist.shift();
+          if (newHist.length > 14) newHist.shift(); // Giữ tối đa 14 kết quả
           return newHist;
         });
         
@@ -197,8 +197,8 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
       const response = await api.get('/game_sessions?status=COMPLETED');
       if (response.data) {
         const results = response.data
-          .map(session => session.result)
-          .filter(res => res) // Lọc bỏ kết quả trống
+          .map(session => session.result ? session.result.toUpperCase() : null)
+          .filter(res => res === 'TAI' || res === 'XIU')
           .slice(-14); // Giới hạn 14 kết quả hiển thị cho vừa màn hình
         setHistory(results);
       }
@@ -368,6 +368,17 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
 
           {/* LỊCH SỬ PHIÊN CHƠI */}
           <View style={styles.historyContainer}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 5 }}
+              ref={(ref) => {
+                // Tự động cuộn đến cuối (kết quả mới nhất) khi có dữ liệu mới
+                if (ref) {
+                  setTimeout(() => ref.scrollToEnd({ animated: true }), 100);
+                }
+              }}
+            >
               {history.map((res, index) => (
                 <View 
                   key={index} 
@@ -377,7 +388,8 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
                   ]} 
                 />
               ))}
-            </View>
+            </ScrollView>
+          </View>
 
             {/* ROW CHIPS */}
             <View style={styles.chipsWrapper}>

@@ -73,12 +73,45 @@
     {
       "id": "2",
       "session_code": "#TX00002",
-      "status": "BETTING",
-      "dice_1": null,
-      "dice_2": null,
-      "dice_3": null,
-      "total_score": null,
-      "result": null,
+      "status": "COMPLETED",
+      "dice_1": 1,
+      "dice_2": 2,
+      "dice_3": 4,
+      "total_score": 7,
+      "result": "XIU",
+      "created_at": "2024-01-04T20:05:00.000Z"
+    },
+    {
+      "id": "2",
+      "session_code": "#TX00002",
+      "status": "COMPLETED",
+      "dice_1": 1,
+      "dice_2": 2,
+      "dice_3": 3,
+      "total_score": 6,
+      "result": "XIU",
+      "created_at": "2024-01-04T20:05:00.000Z"
+    },
+    {
+      "id": "2",
+      "session_code": "#TX00002",
+      "status": "COMPLETED",
+      "dice_1": 6,
+      "dice_2": 2,
+      "dice_3": 3,
+      "total_score": 11,
+      "result": "TAI",
+      "created_at": "2024-01-04T20:05:00.000Z"
+    },
+    {
+      "id": "2",
+      "session_code": "#TX00002",
+      "status": "COMPLETED",
+      "dice_1": 1,
+      "dice_2": 2,
+      "dice_3": 5,
+      "total_score": 9,
+      "result": "XIU",
       "created_at": "2024-01-04T20:05:00.000Z"
     }
   ],
