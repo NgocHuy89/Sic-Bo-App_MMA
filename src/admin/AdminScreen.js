@@ -1,75 +1,155 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function AdminScreen({ navigation, route }) {
-  const user = route?.params?.user || {};
+import AdminDashboard from './AdminDashboard';
+import AdminUserList from './AdminUserList';
+import AdminTransactions from './AdminTransactions';
+import AdminGameConfig from './AdminGameConfig';
 
-  const handleLogout = async () => {
-    await AsyncStorage.removeItem('logged_in_user');
-    navigation.replace('Login');
-  };
+const Tab = createBottomTabNavigator();
 
+// ─── Tab Icon ──────────────────────────────────────────────────────────────────
+function TabIcon({ emoji, focused }) {
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>TRANG QUẢN TRỊ</Text>
-        <Text style={styles.subtitle}>Xin chào, Admin {user.full_name || ''}</Text>
-        <Text style={styles.message}>
-          Giao diện và chức năng dành riêng cho Admin đang được phát triển...
-        </Text>
-        
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Đăng Xuất</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+    <Text style={{ fontSize: focused ? 22 : 18, opacity: focused ? 1 : 0.6 }}>{emoji}</Text>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+// ─── Header with logout ────────────────────────────────────────────────────────
+function AdminHeader({ navigation, user }) {
+  const handleLogout = () => {
+    Alert.alert(
+      'Đăng xuất',
+      'Bạn có chắc muốn đăng xuất khỏi trang quản trị?',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Đăng xuất',
+          style: 'destructive',
+          onPress: async () => {
+            await AsyncStorage.removeItem('logged_in_user');
+            navigation.replace('Login');
+          },
+        },
+      ]
+    );
+  };
+
+  return (
+    <View style={header.bar}>
+      <View>
+        <Text style={header.title}>👑 ADMIN PANEL</Text>
+        <Text style={header.sub}>Xin chào, {user?.full_name || 'Admin'}</Text>
+      </View>
+      <TouchableOpacity style={header.logoutBtn} onPress={handleLogout}>
+        <Text style={header.logoutText}>🚪 Xuất</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// ─── Main Admin Screen (Tab Navigator) ────────────────────────────────────────
+export default function AdminScreen({ navigation, route }) {
+  const user = route?.params?.user || {};
+
+  const tabOptions = {
+    headerShown: true,
+    header: () => <AdminHeader navigation={navigation} user={user} />,
+    tabBarStyle: {
+      backgroundColor: '#1E0505',
+      borderTopColor: '#D4AF37',
+      borderTopWidth: 1.5,
+      height: 58,
+      paddingBottom: 6,
+      paddingTop: 4,
+    },
+    tabBarLabelStyle: {
+      fontSize: 10,
+      fontWeight: '700',
+    },
+    tabBarActiveTintColor: '#D4AF37',
+    tabBarInactiveTintColor: '#5A2A2A',
+  };
+
+  return (
+    <Tab.Navigator screenOptions={tabOptions}>
+      <Tab.Screen
+        name="Dashboard"
+        component={AdminDashboard}
+        options={{
+          tabBarLabel: 'Thống kê',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="📊" focused={focused} />,
+        }}
+      />
+      <Tab.Screen
+        name="Users"
+        component={AdminUserList}
+        options={{
+          tabBarLabel: 'Người dùng',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="👥" focused={focused} />,
+        }}
+      />
+      <Tab.Screen
+        name="Transactions"
+        component={AdminTransactions}
+        initialParams={{ user }}
+        options={{
+          tabBarLabel: 'Giao dịch',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="💳" focused={focused} />,
+        }}
+      />
+      <Tab.Screen
+        name="GameConfig"
+        component={AdminGameConfig}
+        options={{
+          tabBarLabel: 'Cấu hình',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="⚙️" focused={focused} />,
+        }}
+      />
+    </Tab.Navigator>
+  );
+}
+
+// ─── Styles ────────────────────────────────────────────────────────────────────
+const header = StyleSheet.create({
+  bar: {
     backgroundColor: '#1E0505',
-    justifyContent: 'center',
+    borderBottomWidth: 1.5,
+    borderBottomColor: '#D4AF37',
+    paddingHorizontal: 16,
+    paddingTop: 48,
+    paddingBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  content: {
-    padding: 20,
-    alignItems: 'center',
-    backgroundColor: '#350A0A',
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#D4AF37',
-    width: '90%',
   },
   title: {
-    fontSize: 28,
+    fontSize: 18,
     fontWeight: '900',
     color: '#D4AF37',
-    marginBottom: 10,
   },
-  subtitle: {
-    fontSize: 18,
-    color: '#FFF',
-    marginBottom: 30,
+  sub: {
+    fontSize: 12,
+    color: '#A07855',
+    marginTop: 2,
   },
-  message: {
-    fontSize: 16,
-    color: '#F9E596',
-    textAlign: 'center',
-    marginBottom: 40,
-    lineHeight: 24,
+  logoutBtn: {
+    backgroundColor: '#350A0A',
+    borderWidth: 1,
+    borderColor: '#7B1C1C',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
-  logoutButton: {
-    backgroundColor: '#A020F0',
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 15,
+  logoutText: {
+    color: '#FF4444',
+    fontWeight: '700',
+    fontSize: 13,
   },
-  logoutButtonText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-  }
+});
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#1E0505' },
 });
