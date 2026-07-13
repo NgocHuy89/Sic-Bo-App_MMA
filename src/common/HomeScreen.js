@@ -142,41 +142,13 @@ export default function HomeScreen({ navigation, route }) {
     });
   };
 
-  const handleSicBoBetSuccess = async (amount, choice) => {
-    if (!user) {
-      Alert.alert('Lỗi', 'Không tìm thấy thông tin người dùng.');
-      return;
-    }
-    try {
-      // Lấy phiên đang BETTING hiện tại
-      const sessionsRes = await api.get('/game_sessions?status=BETTING');
-      const bettingSession = sessionsRes.data[0];
-      if (!bettingSession) {
-        Alert.alert('Thông báo', 'Hiện không có phiên game nào đang mở cược.');
-        return;
-      }
-
-      // Cập nhật LOCAL state (cho UX mượt)
-      updateBalance(-amount);
-      if (choice === 'TAI') {
-        setPlacedBetTai(prev => prev + amount);
-      } else {
-        setPlacedBetXiu(prev => prev + amount);
-      }
-
-      // Cập nhật DB async (không block UI)
-      api.post('/bets', {
-        user_id: user.id,
-        session_id: bettingSession.id,
-        bet_choice: choice,
-        bet_amount: amount,
-        win_amount: 0,
-        status: 'PENDING',
-        created_at: new Date().toISOString(),
-      }).catch(e => console.error('Bet sync error:', e));
-    } catch (e) {
-      console.error('Bet error:', e);
-      Alert.alert('Lỗi', 'Không thể đặt cược. Vui lòng thử lại.');
+  const handleSicBoBetSuccess = (amount, choice) => {
+    updateBalance(-amount);
+    
+    if (choice === 'TAI') {
+      setPlacedBetTai(prev => prev + amount);
+    } else {
+      setPlacedBetXiu(prev => prev + amount);
     }
   };
 
@@ -293,7 +265,7 @@ export default function HomeScreen({ navigation, route }) {
       />
 
       {/* Hiệu ứng cộng tiền bọc trong Modal để nằm đè lên SicBoModal */}
-      <Modal visible={showWinAnim} transparent={true} animationType="none">
+      <Modal visible={showWinAnim} transparent={true} animationType="none" supportedOrientations={['portrait', 'portrait-upside-down', 'landscape', 'landscape-left', 'landscape-right']}>
         <Animated.View style={[
           styles.winAnimContainer,
           {

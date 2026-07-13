@@ -4,6 +4,7 @@ import { StyleSheet, View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ScreenOrientation from 'expo-screen-orientation';
 
 import LoginScreen from './src/authentication/Login';
 import RegisterScreen from './src/authentication/Register';
@@ -16,6 +17,12 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState('Login');
   const [initialParams, setInitialParams] = useState(null);
+
+  useEffect(() => {
+    // Chủ động cho phép tất cả hướng xoay — hoạt động trên cả Android và iOS
+    // unlockAsync() không đủ, phải dùng lockAsync(ALL) để Android mới nhận
+    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.ALL);
+  }, []);
 
   useEffect(() => {
     const checkLoginStatus = async () => {

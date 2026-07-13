@@ -7,10 +7,12 @@ import {
   Alert,
   Animated,
   Easing,
-  ScrollView
+  ScrollView,
+  useWindowDimensions
 } from 'react-native';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { styles } from './SicBoStyles';
+import { getStyles } from './SicBoStyles';
 import api from '../../services/api';
 import CustomAlert from '../../common/CustomAlert';
 
@@ -28,6 +30,15 @@ const CHIPS = [
 ];
 
 export default function SicBoModal({ visible, onClose, balance, onBetSuccess, timeLeft, gamePhase, placedBetTai = 0, placedBetXiu = 0, onCancelPlacedBets, onResult }) {
+  const { width } = useWindowDimensions();
+  const styles = getStyles(width);
+
+  // Cho phép tất cả hướng xoay khi modal mở — hoạt động trên Android lẫn iOS
+  useEffect(() => {
+    if (visible) {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.ALL);
+    }
+  }, [visible]);
   const [betAmount, setBetAmount] = useState(0);
   const [betChoice, setBetChoice] = useState(null);
   const [history, setHistory] = useState([]);
@@ -268,6 +279,7 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
       transparent={true}
       animationType="fade"
       onRequestClose={handleCancelBet}
+      supportedOrientations={['portrait', 'portrait-upside-down', 'landscape', 'landscape-left', 'landscape-right']}
     >
       <View style={styles.modalOverlay}>
         <TouchableOpacity style={styles.globalCloseBtn} onPress={handleCloseModal}>
