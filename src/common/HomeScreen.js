@@ -142,15 +142,42 @@ export default function HomeScreen({ navigation, route }) {
     });
   };
 
-  const handleSicBoBetSuccess = (amount, choice) => {
-    updateBalance(-amount);
-    
-    if (choice === 'TAI') {
-      setPlacedBetTai(prev => prev + amount);
-    } else {
-      setPlacedBetXiu(prev => prev + amount);
+  const handleSicBoBetSuccess = async (amount, choice) => {
+    if (!user) {
+      Alert.alert('Lỗi', 'Không tìm thấy thông tin người dùng.');
+      return;
     }
-    // Đã gỡ bỏ thông báo đặt cược thành công để người chơi cược liên tục không bị ngắt quãng
+    try {
+      // Lấy phiên đang BETTING hiện tại
+      const sessionsRes = await api.get('/game_sessions?status=BETTING');
+      const bettingSession = sessionsRes.data[0];
+      if (!bettingSession) {
+        Alert.alert('Thông báo', 'Hiện không có phiên game nào đang mở cược.');
+        return;
+      }
+
+      // Cập nhật LOCAL state (cho UX mượt)
+      updateBalance(-amount);
+      if (choice === 'TAI') {
+        setPlacedBetTai(prev => prev + amount);
+      } else {
+        setPlacedBetXiu(prev => prev + amount);
+      }
+
+      // Cập nhật DB async (không block UI)
+      api.post('/bets', {
+        user_id: user.id,
+        session_id: bettingSession.id,
+        bet_choice: choice,
+        bet_amount: amount,
+        win_amount: 0,
+        status: 'PENDING',
+        created_at: new Date().toISOString(),
+      }).catch(e => console.error('Bet sync error:', e));
+    } catch (e) {
+      console.error('Bet error:', e);
+      Alert.alert('Lỗi', 'Không thể đặt cược. Vui lòng thử lại.');
+    }
   };
 
   const handleCancelPlacedBets = () => {
@@ -206,7 +233,6 @@ export default function HomeScreen({ navigation, route }) {
     if (reward > 0) {
       updateBalance(reward);
       triggerWinAnimation(reward);
-      // Đã ẩn Alert chúc mừng theo yêu cầu, chỉ dùng hiệu ứng cộng tiền nổi lên
     }
   };
 
