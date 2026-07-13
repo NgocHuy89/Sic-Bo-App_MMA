@@ -84,11 +84,12 @@ export default function AdminDashboard() {
       const taiCount = sessions.filter(s => s.result === 'TAI').length;
       const xiuCount = sessions.filter(s => s.result === 'XIU').length;
 
-      // Bets
-      const totalBetAmount = bets.reduce((s, b) => s + (b.bet_amount || 0), 0);
-      const totalWinAmount = bets.reduce((s, b) => s + (b.win_amount || 0), 0);
-      const wonBets = bets.filter(b => b.status === 'WON').length;
-      const lostBets = bets.filter(b => b.status === 'LOST').length;
+      // Bets — chỉ tính các bet đã settle (WON hoặc LOST), bỏ qua PENDING
+      const settledBets = bets.filter(b => b.status === 'WON' || b.status === 'LOST');
+      const totalBetAmount = settledBets.reduce((s, b) => s + (b.bet_amount || 0), 0);
+      const totalWinAmount = settledBets.filter(b => b.status === 'WON').reduce((s, b) => s + (b.win_amount || 0), 0);
+      const wonBets = settledBets.filter(b => b.status === 'WON').length;
+      const lostBets = settledBets.filter(b => b.status === 'LOST').length;
 
       // Chart: last 5 sessions bet volume
       const last5Sessions = sessions.slice(-5);

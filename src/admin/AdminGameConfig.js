@@ -200,8 +200,10 @@ export default function AdminGameConfig() {
           text: 'Tạo phiên',
           onPress: async () => {
             try {
-              const sessionCount = sessions.length;
-              const newCode = `#TX${String(sessionCount + 1).padStart(5, '0')}`;
+              // Lấy tổng số phiên thực tế từ DB để tránh trùng session_code
+              const allSessionsRes = await api.get('/game_sessions');
+              const totalCount = allSessionsRes.data.length;
+              const newCode = `#TX${String(totalCount + 1).padStart(5, '0')}`;
               const newSession = {
                 session_code: newCode,
                 status: 'BETTING',
@@ -240,21 +242,60 @@ export default function AdminGameConfig() {
               const d3 = Math.ceil(Math.random() * 6);
               const total = d1 + d2 + d3;
               const result = total >= 11 ? 'TAI' : 'XIU';
+
+              // 1. Cập nhật trạng thái phiên game
               await api.patch(`/game_sessions/${session.id}`, {
                 dice_1: d1, dice_2: d2, dice_3: d3,
                 total_score: total, result,
                 status: 'COMPLETED',
               });
+
+              // 2. Lấy tất cả bets của phiên này và settle
+              const betsRes = await api.get(`/bets?session_id=${session.id}`);
+              const sessionBets = betsRes.data;
+
+              // Lấy config tỷ lệ thưởng
+              const cfgRes = await api.get('/system_configs');
+              const ratioCfg = cfgRes.data.find(c => c.key === 'REWARD_RATIO_TAI_XIU');
+              const rewardRatio = ratioCfg ? parseFloat(ratioCfg.value) : 1.98;
+
+              // Settle từng bet và cập nhật balance người chơi
+              const settlePromises = sessionBets
+                .filter(b => b.status === 'PENDING')
+                .map(async (bet) => {
+                  const isWon = bet.bet_choice === result;
+                  const winAmount = isWon ? Math.floor(bet.bet_amount * rewardRatio) : 0;
+                  // Cập nhật bet
+                  await api.patch(`/bets/${bet.id}`, {
+                    status: isWon ? 'WON' : 'LOST',
+                    win_amount: winAmount,
+                  });
+                  // Nếu thắng, cộng tiền cho người chơi
+                  if (isWon) {
+                    const userRes = await api.get(`/users/${bet.user_id}`);
+                    const currentBalance = userRes.data.balance || 0;
+                    await api.patch(`/users/${bet.user_id}`, {
+                      balance: currentBalance + winAmount,
+                    });
+                  }
+                });
+
+              await Promise.all(settlePromises);
+
               setSessions(prev => prev.map(s =>
                 s.id === session.id
                   ? { ...s, dice_1: d1, dice_2: d2, dice_3: d3, total_score: total, result, status: 'COMPLETED' }
                   : s
               ));
+
+              const wonCount = sessionBets.filter(b => b.bet_choice === result).length;
+              const lostCount = sessionBets.length - wonCount;
               Alert.alert(
                 '🎲 Kết Quả',
-                `Xúc xắc: ${d1} + ${d2} + ${d3} = ${total}\nKết quả: ${result === 'TAI' ? '🟢 TÀI' : '🔴 XỈU'}`
+                `Xúc xắc: ${d1} + ${d2} + ${d3} = ${total}\nKết quả: ${result === 'TAI' ? '🟢 TÀI' : '🔴 XỈU'}\n\nĐã settle: ${wonCount} thắng, ${lostCount} thua`
               );
-            } catch {
+            } catch (e) {
+              console.error('Roll dice error:', e);
               Alert.alert('Lỗi', 'Không thể tung xúc xắc.');
             }
           },

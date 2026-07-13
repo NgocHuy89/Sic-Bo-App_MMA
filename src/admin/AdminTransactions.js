@@ -253,24 +253,25 @@ export default function AdminTransactions({ route }) {
     const user = users[tx.user_id];
     if (!user) { Alert.alert('Lỗi', 'Không tìm thấy người dùng.'); return; }
 
+    // Kiểm tra số dư TRƯỚC khi thực hiện bất kỳ thao tác nào
+    let newBalance = user.balance || 0;
+    if (tx.type === 'DEPOSIT') newBalance += tx.amount;
+    else if (tx.type === 'WITHDRAW') newBalance -= tx.amount;
+
+    if (newBalance < 0) {
+      Alert.alert('Lỗi', 'Số dư người dùng không đủ để rút.');
+      return;
+    }
+
     try {
-      // Update transaction
+      // Cập nhật balance trước để đảm bảo tính nhất quán
+      await api.patch(`/users/${tx.user_id}`, { balance: newBalance });
+      // Sau đó mới đánh dấu transaction là APPROVED
       await api.patch(`/transactions/${tx.id}`, {
         status: 'APPROVED',
         processed_by: adminUser.id || '1',
         updated_at: new Date().toISOString(),
       });
-
-      // Update user balance
-      let newBalance = user.balance || 0;
-      if (tx.type === 'DEPOSIT') newBalance += tx.amount;
-      else if (tx.type === 'WITHDRAW') newBalance -= tx.amount;
-
-      if (newBalance < 0) {
-        Alert.alert('Lỗi', 'Số dư người dùng không đủ để rút.');
-        return;
-      }
-      await api.patch(`/users/${tx.user_id}`, { balance: newBalance });
 
       setTransactions(prev =>
         prev.map(t => t.id === tx.id ? { ...t, status: 'APPROVED', updated_at: new Date().toISOString() } : t)

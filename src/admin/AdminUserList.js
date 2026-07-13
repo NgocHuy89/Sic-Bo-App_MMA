@@ -231,7 +231,20 @@ export default function AdminUserList() {
           text: 'Xác nhận',
           onPress: async () => {
             try {
+              // Cập nhật số dư user
               await api.patch(`/users/${user.id}`, { balance: newBalance });
+              // Tạo transaction record để audit trail
+              await api.post('/transactions', {
+                user_id: user.id,
+                type: amount > 0 ? 'DEPOSIT' : 'WITHDRAW',
+                amount: Math.abs(amount),
+                status: 'APPROVED',
+                reject_reason: '',
+                processed_by: 'ADMIN',
+                note: note || 'Điều chỉnh thủ công bởi Admin',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              });
               setUsers(prev => prev.map(u => u.id === user.id ? { ...u, balance: newBalance } : u));
               setSelectedUser(prev => prev ? { ...prev, balance: newBalance } : null);
               Alert.alert('Thành công', 'Đã điều chỉnh số dư thành công.');

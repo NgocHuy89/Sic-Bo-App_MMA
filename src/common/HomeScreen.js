@@ -9,6 +9,7 @@ import {
   Alert
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../services/api';
 
 // Import Sic Bo Game
 import SicBoModal from '../games/SicBo/SicBoModal';
@@ -71,10 +72,42 @@ export default function HomeScreen({ navigation, route }) {
     }
   };
 
-  const handleSicBoBetSuccess = (amount, choice) => {
-    // Trừ tiền
-    setBalance(prev => prev - amount);
-    Alert.alert("Thành công", `Đã đặt cược ${amount.toLocaleString('vi-VN')} đ vào cửa ${choice === 'TAI' ? 'TÀI' : 'XỈU'}!`);
+  const handleSicBoBetSuccess = async (amount, choice) => {
+    if (!user) {
+      Alert.alert('Lỗi', 'Không tìm thấy thông tin người dùng.');
+      return;
+    }
+    try {
+      // Lấy phiên đang BETTING hiện tại
+      const sessionsRes = await api.get('/game_sessions?status=BETTING');
+      const bettingSession = sessionsRes.data[0];
+      if (!bettingSession) {
+        Alert.alert('Thông báo', 'Hiện không có phiên game nào đang mở cược.');
+        return;
+      }
+
+      // Trừ balance trong DB
+      const newBalance = balance - amount;
+      await api.patch(`/users/${user.id}`, { balance: newBalance });
+
+      // Tạo bản ghi bet trong DB
+      await api.post('/bets', {
+        user_id: user.id,
+        session_id: bettingSession.id,
+        bet_choice: choice,
+        bet_amount: amount,
+        win_amount: 0,
+        status: 'PENDING',
+        created_at: new Date().toISOString(),
+      });
+
+      // Cập nhật balance local
+      setBalance(newBalance);
+      Alert.alert('Thành công', `Đã đặt cược ${amount.toLocaleString('vi-VN')} đ vào cửa ${choice === 'TAI' ? 'TÀI' : 'XỈU'}!`);
+    } catch (e) {
+      console.error('Bet error:', e);
+      Alert.alert('Lỗi', 'Không thể đặt cược. Vui lòng thử lại.');
+    }
   };
 
   const renderGameCard = ({ item }) => (
