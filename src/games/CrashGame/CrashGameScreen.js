@@ -1,20 +1,18 @@
 /**
  * CrashGameScreen.jsx
- * 
- * Thay đổi so với bản gốc:
- * 1. Phiên chơi liên tiếp tự động (waiting → flying → crashed → waiting...)
- *    Người dùng đặt/hủy cược trong giai đoạn "waiting"
- * 2. Lịch sử cược đầy đủ: Cược | Chốt | Nổ | Lời/Lỗ
- * 3. Giao diện chuẩn Aviator: 
- *    - 1 giây đầu máy bay trượt vào vị trí cố định (góc trên phải).
- *    - Sau đó máy bay đứng im, trục tọa độ Y giãn ra, đường Line (Trail) trôi ngược lại để tạo ảo giác tốc độ bay.
+ * * Đã tích hợp tính năng đồng bộ Database:
+ * - Gọi API trừ tiền khi Đặt cược
+ * - Gọi API hoàn tiền khi Hủy cược (trước khi bay)
+ * - Gọi API cộng tiền khi Chốt lời thành công
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   StyleSheet, Text, View, TextInput, TouchableOpacity,
   Alert, FlatList, useWindowDimensions, Animated, Easing,
+  Platform // Đã thêm Platform để nhận diện thiết bị
 } from 'react-native';
+import axios from 'axios'; // Đã thêm thư viện Axios
 
 // ─── CONFIG ────────────────────────────────────────────────────────────────────
 const COUNTDOWN_SECS = 5;        // giây chờ giữa các phiên
@@ -22,10 +20,12 @@ const PLANE_ENTRY_MS = 1000;     // ms máy bay trượt vào vị trí
 const K = 0.00025;               // tốc độ tăng multiplier: mult = e^(K*t)
 const MAX_TRAIL_DOTS = 120;      // số điểm tối đa trong trail
 
+// Cấu hình IP tự động (Web thì localhost, App thì IP máy LAN)
+const SERVER_IP = Platform.OS === 'web' ? 'localhost' : '192.168.1.30'; 
+
 const computeMult = (ms) => Math.pow(Math.E, K * ms);
 
 const generateCrashPoint = () => {
-  // house edge ~1%
   const r = Math.random();
   const crash = 0.99 / r;
   return Math.max(1.0, parseFloat(crash.toFixed(2)));
@@ -33,7 +33,11 @@ const generateCrashPoint = () => {
 
 // ─── COMPONENT ─────────────────────────────────────────────────────────────────
 export default function CrashGameScreen({ navigation, route }) {
+  // Lấy dữ liệu user từ màn hình HomeScreen truyền sang
+  const currentUser = route?.params?.user;
+  const currentUserId = route?.params?.userId || currentUser?.id;
   const initialBalance = route?.params?.currentBalance ?? 500_000;
+  
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
 
@@ -50,7 +54,23 @@ export default function CrashGameScreen({ navigation, route }) {
   const [myBets,      setMyBets]      = useState([]);
   const [trailDots,   setTrailDots]   = useState([]);  // [{x,y}]
 
-  // ── Refs (to read inside closures without stale state) ──────────────────────
+  // ── HÀM ĐỒNG BỘ DB ─────────────────────────────────────────────────────────
+  const syncBalanceToDB = async (newBalance) => {
+    if (!currentUserId) {
+      console.warn("Chưa đăng nhập, không thể lưu DB!");
+      return; 
+    }
+    try {
+      await axios.patch(`http://${SERVER_IP}:3000/users/${currentUserId}`, {
+        balance: newBalance
+      });
+      console.log(`[CrashGame] Đã đồng bộ số dư: ${newBalance}`);
+    } catch (error) {
+      console.error("Lỗi cập nhật DB:", error.message);
+    }
+  };
+
+  // ── Refs ───────────────────────────────────────────────────────────────────
   const phaseRef          = useRef('waiting');
   const hasCashedOutRef   = useRef(false);
   const pendingBetRef     = useRef(0);
@@ -107,20 +127,17 @@ export default function CrashGameScreen({ navigation, route }) {
     syncPhase('flying');
 
     const { w, h } = boardRef.current;
-    // Plane start (just off left) → rest position
     const startX = -10, startY = h * 0.85;
     const restX  = w * 0.75, restY = h * 0.25;
 
     planeLeft.setValue(startX);
     planeTop.setValue(startY);
 
-    // Entry animation (bay lên góc phải trong 1s)
     Animated.parallel([
       Animated.timing(planeLeft, { toValue: restX, duration: PLANE_ENTRY_MS, easing: Easing.out(Easing.quad), useNativeDriver: false }),
       Animated.timing(planeTop,  { toValue: restY, duration: PLANE_ENTRY_MS, easing: Easing.out(Easing.quad), useNativeDriver: false }),
     ]).start(() => { planeMoveDoneRef.current = true; });
 
-    // Game tick
     const tick = () => {
       if (phaseRef.current !== 'flying' || sessionRef.current !== sid) return;
 
@@ -129,31 +146,27 @@ export default function CrashGameScreen({ navigation, route }) {
       setMultiplier(m);
       multiplierRef.current = m;
 
-      // ── LOGIC MỚI: TÍNH TOÁN ĐƯỜNG TRAIL VÀ CỐ ĐỊNH MÁY BAY ──
       const { w: bw, h: bh } = boardRef.current;
       
       if (planeMoveDoneRef.current) {
-        // Giai đoạn 2: Máy bay đứng im, Trail bị kéo trôi ngược về sau và xuống dưới
         planeLeft.setValue(restX);
         planeTop.setValue(restY);
 
-        const speedX = 0.8; // Tốc độ trôi ngang
-        const speedY = 0.4; // Tốc độ trôi dọc xuống
+        const speedX = 0.8; 
+        const speedY = 0.4; 
         
         const next = trailDotsRef.current.map(d => ({
           x: d.x - speedX,
           y: d.y + speedY
-        })).filter(d => d.x > -50 && d.y < bh + 50); // Xóa rác khỏi bộ nhớ khi điểm đã văng ra ngoài màn hình
+        })).filter(d => d.x > -50 && d.y < bh + 50);
 
-        // Neo điểm đầu tiên của đuôi vào đít máy bay
         next.push({ x: restX, y: restY });
         
         trailDotsRef.current = next;
         setTrailDots([...next]);
       } else {
-        // Giai đoạn 1 (0-1s): Máy bay đang di chuyển, vẽ trail bám theo đuôi
         const prog = Math.min(elapsed / PLANE_ENTRY_MS, 1);
-        const easeProg = 1 - (1 - prog) * (1 - prog); // Mô phỏng Easing.out(quad)
+        const easeProg = 1 - (1 - prog) * (1 - prog); 
         const currX = startX + (restX - startX) * easeProg;
         const currY = startY + (restY - startY) * easeProg;
 
@@ -190,7 +203,6 @@ export default function CrashGameScreen({ navigation, route }) {
 
     setCrashHistory(prev => [fm, ...prev].slice(0, 20));
 
-    // Record loss if bet was not cashed out
     if (pendingBetRef.current > 0 && !hasCashedOutRef.current) {
       const bet = pendingBetRef.current;
       setMyBets(prev => [{
@@ -211,7 +223,7 @@ export default function CrashGameScreen({ navigation, route }) {
     }, 2800);
   }, []);
 
-  // ── Place / cancel bet ───────────────────────────────────────────────────────
+  // ── Đặt cược & Đồng bộ DB ────────────────────────────────────────────────────
   const handlePlaceBet = () => {
     if (phase !== 'waiting' || betPlaced) return;
     const bet = parseInt(betAmountRef.current);
@@ -219,19 +231,30 @@ export default function CrashGameScreen({ navigation, route }) {
       Alert.alert('Lỗi', 'Số tiền cược không hợp lệ hoặc không đủ số dư!');
       return;
     }
-    setBalance(b => b - bet);
+    
+    // TRỪ TIỀN VÀ LƯU VÀO DB
+    const newBalance = balance - bet;
+    setBalance(newBalance);
+    syncBalanceToDB(newBalance);
+
     setPendingBet(bet); pendingBetRef.current = bet;
     setBetPlaced(true);
   };
 
+  // ── Hủy cược & Đồng bộ DB ────────────────────────────────────────────────────
   const handleCancelBet = () => {
     if (phase !== 'waiting' || !betPlaced) return;
-    setBalance(b => b + pendingBet);
+    
+    // HOÀN TIỀN VÀ LƯU VÀO DB
+    const newBalance = balance + pendingBet;
+    setBalance(newBalance);
+    syncBalanceToDB(newBalance);
+
     setPendingBet(0); pendingBetRef.current = 0;
     setBetPlaced(false);
   };
 
-  // ── Cash out ─────────────────────────────────────────────────────────────────
+  // ── Chốt lời & Đồng bộ DB ────────────────────────────────────────────────────
   const handleCashOut = () => {
     if (phase !== 'flying' || hasCashedOutRef.current || !pendingBetRef.current) return;
     const bet    = pendingBetRef.current;
@@ -239,7 +262,11 @@ export default function CrashGameScreen({ navigation, route }) {
     const reward = Math.floor(bet * mult);
     const profit = reward - bet;
 
-    setBalance(b => b + reward);
+    // CỘNG TIỀN THẮNG VÀ LƯU VÀO DB
+    const newBalance = balance + reward;
+    setBalance(newBalance);
+    syncBalanceToDB(newBalance);
+
     setHasCashedOut(true); hasCashedOutRef.current = true;
 
     setMyBets(prev => [{
@@ -270,7 +297,7 @@ export default function CrashGameScreen({ navigation, route }) {
   // ── Render trail ─────────────────────────────────────────────────────────────
   const renderTrail = () => {
     if (phase === 'waiting' || trailDots.length < 2) return null;
-    const color = phase === 'crashed' ? '#ff4444' : '#e94560'; // Màu đỏ rực của trail
+    const color = phase === 'crashed' ? '#ff4444' : '#e94560';
 
     return trailDots.map((dot, i) => {
       if (i === 0) return null;
@@ -289,7 +316,7 @@ export default function CrashGameScreen({ navigation, route }) {
             left: prev.x,
             top: prev.y,
             width: len,
-            height: i === trailDots.length - 1 ? 4 : 2, // Đuôi dày hơn ở mũi
+            height: i === trailDots.length - 1 ? 4 : 2,
             backgroundColor: color,
             opacity: alpha,
             transformOrigin: 'left center',
@@ -312,10 +339,8 @@ export default function CrashGameScreen({ navigation, route }) {
         boardRef.current = { w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height };
       }}
     >
-      {/* ── LOGIC MỚI: Grid (Trục Y) co giãn dựa trên độ cao của số X ── */}
       <View style={StyleSheet.absoluteFill}>
         {[0.2, 0.5, 0.8].map((frac, i) => {
-          // multiplier càng to, các vạch grid càng giãn số to ra để lấp đầy màn hình
           const gridVal = (multiplier > 1.5 ? multiplier * (1 - frac) : 1 + (1 - frac) * 0.5).toFixed(2);
           return (
             <View key={i} style={[styles.gridLine, { top: `${frac * 100}%` }]}>
@@ -325,10 +350,8 @@ export default function CrashGameScreen({ navigation, route }) {
         })}
       </View>
 
-      {/* Trail Area */}
       {renderTrail()}
 
-      {/* Waiting overlay */}
       {phase === 'waiting' && (
         <View style={styles.waitingOverlay}>
           <Text style={styles.waitingLabel}>Phiên mới bắt đầu sau</Text>
@@ -343,24 +366,20 @@ export default function CrashGameScreen({ navigation, route }) {
         </View>
       )}
 
-      {/* Crashed banner */}
       {phase === 'crashed' && (
         <Text style={styles.crashBanner}>💥 MÁY BAY NỔ!</Text>
       )}
 
-      {/* Cashed out badge */}
       {phase === 'flying' && hasCashedOut && (
         <View style={styles.cashedOutBadge}>
           <Text style={styles.cashedOutText}>✓ Đã chốt lời an toàn</Text>
         </View>
       )}
 
-      {/* Multiplier */}
       <Text style={[styles.multiplierText, isLandscape && { fontSize: 38 }, { color: multColor }]}>
         {multiplier.toFixed(2)}x
       </Text>
 
-      {/* Plane */}
       {phase !== 'waiting' && (
         <Animated.View style={[styles.planeWrapper, { left: planeLeft, top: planeTop }]}>
           {phase === 'crashed'
@@ -374,7 +393,6 @@ export default function CrashGameScreen({ navigation, route }) {
 
   // ── Render bet controls ──────────────────────────────────────────────────────
   const canEdit  = phase === 'waiting' && !betPlaced;
-  const potWin   = Math.floor((parseInt(betAmount) || 0) * multiplier);
 
   const renderBetControl = () => (
     <View style={styles.betControlSection}>
@@ -415,7 +433,6 @@ export default function CrashGameScreen({ navigation, route }) {
         ))}
       </View>
 
-      {/* Primary action */}
       {phase === 'waiting' && !betPlaced && (
         <TouchableOpacity style={[styles.mainBtn, styles.btnBet]} onPress={handlePlaceBet}>
           <Text style={styles.mainBtnText}>ĐẶT CƯỢC</Text>
