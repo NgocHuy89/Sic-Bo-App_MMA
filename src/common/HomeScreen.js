@@ -1,17 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  FlatList, 
+import {
+  StyleSheet,
+  Text,
+  View,
+  FlatList,
   TouchableOpacity,
-  Alert,
   Animated,
   Easing,
-  Modal
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useIsFocused } from '@react-navigation/native';
 
 import api from '../services/api';
 
@@ -20,10 +19,48 @@ import SicBoModal from '../games/SicBo/SicBoModal';
 import CustomAlert from './CustomAlert';
 
 const GAMES = [
-  { id: '1', title: 'TÀI XỈU', subtitle: 'SIC BO CLASSIC', color: '#8B0000', icon: '🎲' },
-  { id: '2', title: 'BẦU CUA', subtitle: 'TÔM CÁ', color: '#D2691E', icon: '🦀' },
-  { id: '3', title: 'ROULETTE', subtitle: 'VÒNG QUAY MAY MẮN', color: '#006400', icon: '🎡' },
-  { id: '4', title: 'POKER', subtitle: 'TEXAS HOLDEM', color: '#4B0082', icon: '🃏' },
+  {
+    id: '1',
+    title: 'TÀI XỈU',
+    subtitle: 'SIC BO CLASSIC',
+    color: '#8B0000',
+    icon: '🎲',
+  },
+  {
+    id: '2',
+    title: 'BẦU CUA',
+    subtitle: 'TÔM CÁ',
+    color: '#D2691E',
+    icon: '🦀',
+  },
+  {
+    id: '3',
+    title: 'ROULETTE',
+    subtitle: 'VÒNG QUAY MAY MẮN',
+    color: '#006400',
+    icon: '🎡',
+  },
+  {
+    id: '4',
+    title: 'POKER',
+    subtitle: 'TEXAS HOLDEM',
+    color: '#4B0082',
+    icon: '🃏',
+  },
+  {
+    id: '5',
+    title: 'MÁY BAY',
+    subtitle: 'CHUYẾN BAY MẠO HIỂM',
+    color: '#16213e',
+    icon: '✈️',
+  },
+  {
+    id: '6',
+    title: 'LEO THÁP',
+    subtitle: 'ĐI TÌM KHO BÁU',
+    color: '#b6914b',
+    icon: '🦁',
+  },
 ];
 
 export default function HomeScreen({ navigation, route }) {
@@ -32,10 +69,10 @@ export default function HomeScreen({ navigation, route }) {
   const fullName = user ? user.full_name : 'Người chơi Vô danh';
 
   const [balance, setBalance] = useState(initialBalance);
-  
+  const isFocused = useIsFocused();
+
   // States for Sic Bo Game
   const [isSicBoVisible, setIsSicBoVisible] = useState(false);
-
   const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '' });
 
   const showAlert = (title, message) => {
@@ -44,7 +81,7 @@ export default function HomeScreen({ navigation, route }) {
 
   const [placedBetTai, _setPlacedBetTai] = useState(0);
   const [placedBetXiu, _setPlacedBetXiu] = useState(0);
-  
+
   const placedBetTaiRef = useRef(0);
   const placedBetXiuRef = useRef(0);
 
@@ -70,10 +107,15 @@ export default function HomeScreen({ navigation, route }) {
   const [timeLeft, setTimeLeft] = useState(60);
   const [gamePhase, setGamePhase] = useState('BETTING'); // 'BETTING' | 'RESULT'
 
+  useEffect(() => {
+    if (user?.balance !== undefined) {
+      setBalance(user.balance);
+    }
+  }, [user?.balance, user?.id]);
+
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem('logged_in_user');
-      // Dùng navigate để tự động bubble up lên Stack chứa Login
       navigation.navigate('Login');
     } catch (error) {
       console.log('Logout error:', error);
@@ -91,42 +133,73 @@ export default function HomeScreen({ navigation, route }) {
         console.log('Fetch config error:', e);
       }
     };
+
     fetchConfig();
   }, []);
 
   useEffect(() => {
+    if (!isFocused || !user?.id) return;
+
+    const refreshBalance = async () => {
+      try {
+        const res = await api.get(`/users/${user.id}`);
+        if (res.data?.balance !== undefined) {
+          setBalance(res.data.balance);
+        }
+      } catch (error) {
+        console.log('Refresh balance error:', error);
+      }
+    };
+
+    refreshBalance();
+  }, [isFocused, user?.id]);
+
+  useEffect(() => {
     const timer = setInterval(() => {
-      setTimeLeft(prev => {
+      setTimeLeft((prev) => {
         if (prev <= 1) {
           if (gamePhase === 'BETTING') {
             setGamePhase('RESULT');
-            return 5; // 5 giây xem kết quả
-          } else {
-            setGamePhase('BETTING');
-            setPlacedBetTai(0);
-            setPlacedBetXiu(0);
-            return 60; // 60 giây đặt cược mới
+            return 5;
           }
+
+          setGamePhase('BETTING');
+          setPlacedBetTai(0);
+          setPlacedBetXiu(0);
+          return 60;
         }
+
         return prev - 1;
       });
     }, 1000);
-    
+
     return () => clearInterval(timer);
   }, [gamePhase]);
 
   const handlePlayGame = (gameId) => {
     if (gameId === '1') {
       setIsSicBoVisible(true);
+    } else if (gameId === '5') {
+      navigation.navigate('CrashGame', {
+        user,
+        userId: user?.id,
+        currentBalance: balance,
+      });
+    } else if (gameId === '6') {
+      navigation.navigate('LeoThap', {
+        user,
+        userId: user?.id,
+        currentBalance: balance,
+      });
     } else {
-      showAlert("Thông báo", "Game này đang trong quá trình phát triển!");
+      showAlert('Thông báo', 'Game này đang trong quá trình phát triển!');
     }
   };
 
   const updateBalance = (amountChange) => {
-    setBalance(prev => {
+    setBalance((prev) => {
       const newBalance = prev + amountChange;
-      if (user && user.id) {
+      if (user?.id) {
         const saveBalance = async () => {
           try {
             const updatedUser = { ...user, balance: newBalance };
@@ -144,12 +217,14 @@ export default function HomeScreen({ navigation, route }) {
 
   const handleSicBoBetSuccess = (amount, choice) => {
     updateBalance(-amount);
-    
+
     if (choice === 'TAI') {
-      setPlacedBetTai(prev => prev + amount);
+      setPlacedBetTai((prev) => prev + amount);
     } else {
-      setPlacedBetXiu(prev => prev + amount);
+      setPlacedBetXiu((prev) => prev + amount);
     }
+
+    showAlert('Thành công', `Đã đặt cược ${amount.toLocaleString('vi-VN')} đ vào cửa ${choice === 'TAI' ? 'TÀI' : 'XỈU'}!`);
   };
 
   const handleCancelPlacedBets = () => {
@@ -158,9 +233,9 @@ export default function HomeScreen({ navigation, route }) {
       updateBalance(totalPlaced);
       setPlacedBetTai(0);
       setPlacedBetXiu(0);
-      showAlert("Thành công", `Đã hoàn lại ${totalPlaced.toLocaleString('vi-VN')} đ tiền cược!`);
+      showAlert('Thành công', `Đã hoàn lại ${totalPlaced.toLocaleString('vi-VN')} đ tiền cược!`);
     } else {
-      showAlert("Thông báo", "Bạn chưa đặt cược trong phiên này!");
+      showAlert('Thông báo', 'Bạn chưa đặt cược trong phiên này!');
     }
   };
 
@@ -182,7 +257,7 @@ export default function HomeScreen({ navigation, route }) {
         duration: 2500,
         delay: 500,
         useNativeDriver: true,
-      })
+      }),
     ]).start(() => {
       setShowWinAnim(false);
     });
@@ -191,16 +266,13 @@ export default function HomeScreen({ navigation, route }) {
   const handleGameResult = (resultText) => {
     const currentBetTai = placedBetTaiRef.current;
     const currentBetXiu = placedBetXiuRef.current;
-    
-    console.log(`[DEBUG] handleGameResult: resultText=${resultText}, placedBetTai=${currentBetTai}, placedBetXiu=${currentBetXiu}`);
+
     let reward = 0;
     if (resultText === 'TAI' && currentBetTai > 0) {
       reward = currentBetTai * rewardRatio;
     } else if (resultText === 'XIU' && currentBetXiu > 0) {
       reward = currentBetXiu * rewardRatio;
     }
-
-    console.log(`[DEBUG] handleGameResult: reward=${reward}`);
 
     if (reward > 0) {
       updateBalance(reward);
@@ -209,7 +281,7 @@ export default function HomeScreen({ navigation, route }) {
   };
 
   const renderGameCard = ({ item }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[styles.card, { backgroundColor: item.color }]}
       onPress={() => handlePlayGame(item.id)}
     >
@@ -231,7 +303,10 @@ export default function HomeScreen({ navigation, route }) {
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Xin chào, {fullName}!</Text>
-          <Text style={styles.balance}>Số dư: <Text style={styles.balanceAmount}>{balance.toLocaleString('vi-VN')} đ</Text></Text>
+          <Text style={styles.balance}>
+            Số dư:{' '}
+            <Text style={styles.balanceAmount}>{balance.toLocaleString('vi-VN')} đ</Text>
+          </Text>
         </View>
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Text style={styles.logoutBtnText}>Đăng xuất</Text>
@@ -239,21 +314,26 @@ export default function HomeScreen({ navigation, route }) {
       </View>
 
       <Text style={styles.sectionTitle}>CÁC TRÒ CHƠI HẤP DẪN</Text>
-      
+
       <FlatList
         data={GAMES}
         renderItem={renderGameCard}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         numColumns={2}
         columnWrapperStyle={styles.row}
         showsVerticalScrollIndicator={false}
       />
 
-      {/* SIC BO OVERLAY MODAL */}
-      <SicBoModal 
-        visible={isSicBoVisible} 
-        onClose={() => setIsSicBoVisible(false)} 
+      {showWinAnim && (
+        <View style={styles.winAnimContainer}>
+          <Text style={styles.winAnimText}>+{winAmount.toLocaleString('vi-VN')} đ</Text>
+        </View>
+      )}
+
+      <SicBoModal
+        visible={isSicBoVisible}
+        onClose={() => setIsSicBoVisible(false)}
         balance={balance}
         onBetSuccess={handleSicBoBetSuccess}
         timeLeft={timeLeft}
@@ -264,24 +344,11 @@ export default function HomeScreen({ navigation, route }) {
         onResult={handleGameResult}
       />
 
-      {/* Hiệu ứng cộng tiền bọc trong Modal để nằm đè lên SicBoModal */}
-      <Modal visible={showWinAnim} transparent={true} animationType="none" supportedOrientations={['portrait', 'portrait-upside-down', 'landscape', 'landscape-left', 'landscape-right']}>
-        <Animated.View style={[
-          styles.winAnimContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: floatAnim }]
-          }
-        ]} pointerEvents="none">
-          <Text style={styles.winAnimText}>+{winAmount.toLocaleString('vi-VN')} đ</Text>
-        </Animated.View>
-      </Modal>
-
-      <CustomAlert 
+      <CustomAlert
         visible={alertConfig.visible}
         title={alertConfig.title}
         message={alertConfig.message}
-        onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+        onClose={() => setAlertConfig({ visible: false, title: '', message: '' })}
       />
     </SafeAreaView>
   );
@@ -388,8 +455,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: {width: -1, height: 1},
-    textShadowRadius: 10
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10,
   },
   cardSubtitle: {
     color: '#F9E596',
