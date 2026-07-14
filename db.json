@@ -18,7 +18,7 @@
       "role": "CUSTOMER",
       "full_name": "Nguyễn Văn A",
       "phone_number": "0123456789",
-      "balance": 500000,
+      "balance": 80000,
       "status": "ACTIVE",
       "created_at": "2024-01-02T00:00:00.000Z"
     },
@@ -28,7 +28,7 @@
       "role": "CUSTOMER",
       "full_name": "ngochuy",
       "phone_number": "0384006228",
-      "balance": 21245000,
+      "balance": 18495000,
       "status": "ACTIVE",
       "created_at": "2026-06-21T21:50:13.743Z",
       "id": "uxIHtp7QPFA"
@@ -51,14 +51,25 @@
       "user_id": "2",
       "type": "WITHDRAW",
       "amount": 500000,
-      "status": "PENDING",
+      "status": "APPROVED",
       "reject_reason": "",
-      "processed_by": null,
+      "processed_by": "1",
       "created_at": "2024-01-04T15:00:00.000Z",
-      "updated_at": "2024-01-04T15:00:00.000Z"
+      "updated_at": "2026-07-14T13:53:57.035Z"
     }
   ],
   "game_sessions": [
+    {
+      "id": "current",
+      "session_code": "#TX_LIVE",
+      "status": "BETTING",
+      "dice_1": null,
+      "dice_2": null,
+      "dice_3": null,
+      "total_score": null,
+      "result": null,
+      "created_at": "2026-01-01T00:00:00.000Z"
+    },
     {
       "id": "1",
       "session_code": "#TX00001",
@@ -73,12 +84,45 @@
     {
       "id": "2",
       "session_code": "#TX00002",
-      "status": "BETTING",
-      "dice_1": null,
-      "dice_2": null,
-      "dice_3": null,
-      "total_score": null,
-      "result": null,
+      "status": "COMPLETED",
+      "dice_1": 1,
+      "dice_2": 2,
+      "dice_3": 4,
+      "total_score": 7,
+      "result": "XIU",
+      "created_at": "2024-01-04T20:05:00.000Z"
+    },
+    {
+      "id": "2",
+      "session_code": "#TX00002",
+      "status": "COMPLETED",
+      "dice_1": 1,
+      "dice_2": 2,
+      "dice_3": 3,
+      "total_score": 6,
+      "result": "XIU",
+      "created_at": "2024-01-04T20:05:00.000Z"
+    },
+    {
+      "id": "2",
+      "session_code": "#TX00002",
+      "status": "COMPLETED",
+      "dice_1": 6,
+      "dice_2": 2,
+      "dice_3": 3,
+      "total_score": 11,
+      "result": "TAI",
+      "created_at": "2024-01-04T20:05:00.000Z"
+    },
+    {
+      "id": "2",
+      "session_code": "#TX00002",
+      "status": "COMPLETED",
+      "dice_1": 1,
+      "dice_2": 2,
+      "dice_3": 5,
+      "total_score": 9,
+      "result": "XIU",
       "created_at": "2024-01-04T20:05:00.000Z"
     }
   ],
@@ -131,7 +175,7 @@
     {
       "id": "3",
       "key": "REWARD_RATIO_TAI_XIU",
-      "value": "1.98",
+      "value": "1.9",
       "description": "Tỷ lệ trả thưởng khi cược trúng Tài/Xỉu"
     }
   ],
@@ -152,6 +196,6 @@
       "is_read": false,
       "created_at": "2024-01-04T20:04:00.000Z"
     }
-  ]
- 
+  ],
+  "$schema": "./node_modules/json-server/schema.json"
 }

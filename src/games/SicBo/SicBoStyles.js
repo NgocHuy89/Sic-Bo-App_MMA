@@ -1,6 +1,4 @@
-import { StyleSheet, Dimensions } from 'react-native';
-
-const { width } = Dimensions.get('window');
+import { StyleSheet } from 'react-native';
 
 // Lấy tone màu chủ đạo từ ảnh
 const COLORS = {
@@ -16,7 +14,7 @@ const COLORS = {
   redCancel: '#7A0C0C',
 };
 
-export const styles = StyleSheet.create({
+export const getStyles = (width) => StyleSheet.create({
   // Overlay
   modalOverlay: {
     flex: 1,

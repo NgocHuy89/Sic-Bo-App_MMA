@@ -7,11 +7,16 @@ import {
   Alert,
   Animated,
   Easing,
-  ScrollView
+  ScrollView,
+  useWindowDimensions
 } from 'react-native';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { styles } from './SicBoStyles';
+import { getStyles } from './SicBoStyles';
 import api from '../../services/api';
+import CustomAlert from '../../common/CustomAlert';
+
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 const CHIPS = [
   { label: '1K', value: 1000 },
@@ -24,13 +29,29 @@ const CHIPS = [
   { label: '50M', value: 50000000 },
 ];
 
-export default function SicBoModal({ visible, onClose, balance, onBetSuccess, timeLeft, gamePhase }) {
+export default function SicBoModal({ visible, onClose, balance, onBetSuccess, timeLeft, gamePhase, placedBetTai = 0, placedBetXiu = 0, onCancelPlacedBets, onResult }) {
+  const { width } = useWindowDimensions();
+  const styles = getStyles(width);
+
+  // Cho phép tất cả hướng xoay khi modal mở — hoạt động trên Android lẫn iOS
+  useEffect(() => {
+    if (visible) {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.ALL);
+    }
+  }, [visible]);
   const [betAmount, setBetAmount] = useState(0);
   const [betChoice, setBetChoice] = useState(null);
   const [history, setHistory] = useState([]);
   
   const DICE_FACES = ['dice-one', 'dice-two', 'dice-three', 'dice-four', 'dice-five', 'dice-six'];
   const [diceResults, setDiceResults] = useState(['dice-one', 'dice-three', 'dice-five']);
+  const evaluatedPhase = useRef(null);
+
+  const [alertConfig, setAlertConfig] = useState({ visible: false, title: '', message: '' });
+
+  const showAlert = (title, message) => {
+    setAlertConfig({ visible: true, title, message });
+  };
 
   const pos1 = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const pos2 = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
@@ -40,11 +61,24 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
   const rot2 = useRef(new Animated.Value(0)).current;
   const rot3 = useRef(new Animated.Value(0)).current;
 
+  const [winningChoice, setWinningChoice] = useState(null);
+  const pulseAnimTai = useRef(new Animated.Value(1)).current;
+  const pulseAnimXiu = useRef(new Animated.Value(1)).current;
+
   useEffect(() => {
     let animActive = true;
     let faceInterval;
 
     if (visible && gamePhase === 'BETTING') {
+      if (evaluatedPhase.current !== 'BETTING') {
+        evaluatedPhase.current = 'BETTING';
+        setWinningChoice(null);
+        pulseAnimTai.stopAnimation();
+        pulseAnimTai.setValue(1);
+        pulseAnimXiu.stopAnimation();
+        pulseAnimXiu.setValue(1);
+      }
+
       // Đệ quy thay đổi tọa độ liên tục
       const animatePos = (posAnim) => {
         const randomX = (Math.random() - 0.5) * 50; 
@@ -54,7 +88,7 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
           toValue: { x: randomX, y: randomY },
           duration: 150 + Math.random() * 150, 
           easing: Easing.linear,
-          useNativeDriver: false
+          useNativeDriver: true
         }).start(({ finished }) => {
           if (finished && animActive) animatePos(posAnim);
         });
@@ -67,7 +101,7 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
             toValue: 1,
             duration: duration,
             easing: Easing.linear,
-            useNativeDriver: false
+            useNativeDriver: true
           })
         ).start();
       };
@@ -102,7 +136,8 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
       rot1.setValue(0); rot2.setValue(0); rot3.setValue(0);
 
       // Random kết quả nếu đang ở pha kết quả
-      if (gamePhase === 'RESULT') {
+      if (gamePhase === 'RESULT' && evaluatedPhase.current !== 'RESULT') {
+        evaluatedPhase.current = 'RESULT';
         const r1 = Math.floor(Math.random() * 6);
         const r2 = Math.floor(Math.random() * 6);
         const r3 = Math.floor(Math.random() * 6);
@@ -110,14 +145,36 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
         // Hiển thị mặt xúc xắc đúng với kết quả
         setDiceResults([DICE_FACES[r1], DICE_FACES[r2], DICE_FACES[r3]]);
         
-        // Fake đẩy kết quả vào lịch sử
         const sum = r1 + r2 + r3 + 3;
         const resultText = (sum >= 11) ? 'TAI' : 'XIU';
+        console.log(`[DEBUG] SicBoModal: Generated resultText=${resultText}, onResult is defined: ${!!onResult}`);
         setHistory(prev => {
           const newHist = [...prev, resultText];
-          if (newHist.length > 14) newHist.shift();
+          if (newHist.length > 14) newHist.shift(); // Giữ tối đa 14 kết quả
           return newHist;
         });
+        
+        setWinningChoice(resultText);
+
+        const targetAnim = resultText === 'TAI' ? pulseAnimTai : pulseAnimXiu;
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(targetAnim, {
+              toValue: 1.1,
+              duration: 400,
+              useNativeDriver: false,
+            }),
+            Animated.timing(targetAnim, {
+              toValue: 1,
+              duration: 400,
+              useNativeDriver: false,
+            })
+          ])
+        ).start();
+
+        if (onResult) {
+          onResult(resultText);
+        }
       }
     }
 
@@ -151,8 +208,8 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
       const response = await api.get('/game_sessions?status=COMPLETED');
       if (response.data) {
         const results = response.data
-          .map(session => session.result)
-          .filter(res => res) // Lọc bỏ kết quả trống
+          .map(session => session.result ? session.result.toUpperCase() : null)
+          .filter(res => res === 'TAI' || res === 'XIU')
           .slice(-14); // Giới hạn 14 kết quả hiển thị cho vừa màn hình
         setHistory(results);
       }
@@ -173,27 +230,40 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
     setBetAmount(balance);
   };
 
-  const handleCancelBet = () => {
+  const handleCloseModal = () => {
     setBetAmount(0);
     setBetChoice(null);
     onClose();
   };
 
+  const handleCancelBet = () => {
+    if (gamePhase === 'RESULT') {
+      showAlert("Thông báo", "Đã hết thời gian hủy cược!");
+      return;
+    }
+    setBetAmount(0);
+    setBetChoice(null);
+    
+    if (onCancelPlacedBets) {
+      onCancelPlacedBets();
+    }
+  };
+
   const handleConfirmBet = () => {
     if (gamePhase === 'RESULT') {
-      Alert.alert("Thông báo", "Đã hết thời gian đặt cược, vui lòng đợi phiên tiếp theo!");
+      showAlert("Thông báo", "Đã hết thời gian đặt cược, vui lòng đợi phiên tiếp theo!");
       return;
     }
     if (!betChoice) {
-      Alert.alert("Lỗi", "Vui lòng chọn cửa cược (TÀI hoặc XỈU)!");
+      showAlert("Lỗi", "Vui lòng chọn cửa cược (TÀI hoặc XỈU)!");
       return;
     }
     if (betAmount <= 0) {
-      Alert.alert("Lỗi", "Vui lòng đặt cược số tiền hợp lệ!");
+      showAlert("Lỗi", "Vui lòng đặt cược số tiền hợp lệ!");
       return;
     }
     if (betAmount > balance) {
-      Alert.alert("Lỗi", "Số dư không đủ để đặt cược!");
+      showAlert("Lỗi", "Số dư không đủ để đặt cược!");
       return;
     }
     
@@ -201,7 +271,6 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
     
     setBetAmount(0);
     setBetChoice(null);
-    onClose();
   };
 
   return (
@@ -210,9 +279,10 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
       transparent={true}
       animationType="fade"
       onRequestClose={handleCancelBet}
+      supportedOrientations={['portrait', 'portrait-upside-down', 'landscape', 'landscape-left', 'landscape-right']}
     >
       <View style={styles.modalOverlay}>
-        <TouchableOpacity style={styles.globalCloseBtn} onPress={handleCancelBet}>
+        <TouchableOpacity style={styles.globalCloseBtn} onPress={handleCloseModal}>
           <Text style={styles.closeButtonText}>X</Text>
         </TouchableOpacity>
 
@@ -234,8 +304,13 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
             <View style={styles.boardContainer}>
               <View style={styles.boardContent}>
                 {/* PANEL TÀI */}
-                <TouchableOpacity 
-                  style={[styles.doorPanel, betChoice === 'TAI' && styles.doorPanelActive]}
+                <AnimatedTouchableOpacity 
+                  style={[
+                    styles.doorPanel, 
+                    betChoice === 'TAI' && styles.doorPanelActive,
+                    winningChoice === 'TAI' && { borderColor: '#FBE8A6', borderWidth: 4, backgroundColor: 'rgba(229, 185, 92, 0.3)', shadowColor: '#FBE8A6', shadowOpacity: 1, shadowRadius: 15, elevation: 10 },
+                    { transform: [{ scale: pulseAnimTai }] }
+                  ]}
                   onPress={() => setBetChoice('TAI')}
                 >
                   <Text style={[styles.doorTitle, styles.doorTitleTai, betChoice === 'TAI' && styles.doorTitleActive]}>TÀI</Text>
@@ -243,21 +318,30 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
                     <Text style={styles.doorTotalBetText}>{totalTaiPool.toLocaleString('vi-VN')}</Text>
                   </View>
                   <View style={styles.doorMyBet}>
-                    <Text style={styles.doorMyBetText}>{betChoice === 'TAI' ? betAmount.toLocaleString('vi-VN') : '0'}</Text>
+                    <Text style={styles.doorMyBetText}>{(placedBetTai + (betChoice === 'TAI' ? betAmount : 0)).toLocaleString('vi-VN')}</Text>
                   </View>
-                </TouchableOpacity>
+                </AnimatedTouchableOpacity>
 
                 {/* DÍCE CENTER */}
                 <View style={styles.diceCenterContainer}>
                   <View style={styles.diceIconGroup}>
                     <Animated.View style={[{ position: 'absolute', transform: getTransform(pos1, rot1) }]}>
-                      <FontAwesome5 name={diceResults[0]} size={32} color="#FFFFFF" solid />
+                      <View style={{ width: 28, height: 28, borderRadius: 8, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
+                        <View style={{ position: 'absolute', width: '100%', height: '100%', backgroundColor: diceResults[0] === 'dice-one' ? '#D31A1A' : '#000000' }} />
+                        <FontAwesome5 name={diceResults[0]} size={35} color="#FFFFFF" solid style={{ position: 'absolute' }} />
+                      </View>
                     </Animated.View>
                     <Animated.View style={[{ position: 'absolute', transform: getTransform(pos2, rot2) }]}>
-                      <FontAwesome5 name={diceResults[1]} size={32} color="#FFFFFF" solid />
+                      <View style={{ width: 28, height: 28, borderRadius: 8, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
+                        <View style={{ position: 'absolute', width: '100%', height: '100%', backgroundColor: diceResults[1] === 'dice-one' ? '#D31A1A' : '#000000' }} />
+                        <FontAwesome5 name={diceResults[1]} size={35} color="#FFFFFF" solid style={{ position: 'absolute' }} />
+                      </View>
                     </Animated.View>
                     <Animated.View style={[{ position: 'absolute', transform: getTransform(pos3, rot3) }]}>
-                      <FontAwesome5 name={diceResults[2]} size={32} color="#FFFFFF" solid />
+                      <View style={{ width: 28, height: 28, borderRadius: 8, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
+                        <View style={{ position: 'absolute', width: '100%', height: '100%', backgroundColor: diceResults[2] === 'dice-one' ? '#D31A1A' : '#000000' }} />
+                        <FontAwesome5 name={diceResults[2]} size={35} color="#FFFFFF" solid style={{ position: 'absolute' }} />
+                      </View>
                     </Animated.View>
                   </View>
                   {betAmount > 0 && (
@@ -274,8 +358,13 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
                 </View>
 
                 {/* PANEL XỈU */}
-                <TouchableOpacity 
-                  style={[styles.doorPanel, betChoice === 'XIU' && styles.doorPanelActive]}
+                <AnimatedTouchableOpacity 
+                  style={[
+                    styles.doorPanel, 
+                    betChoice === 'XIU' && styles.doorPanelActive,
+                    winningChoice === 'XIU' && { borderColor: '#FBE8A6', borderWidth: 4, backgroundColor: 'rgba(229, 185, 92, 0.3)', shadowColor: '#FBE8A6', shadowOpacity: 1, shadowRadius: 15, elevation: 10 },
+                    { transform: [{ scale: pulseAnimXiu }] }
+                  ]}
                   onPress={() => setBetChoice('XIU')}
                 >
                   <Text style={[styles.doorTitle, styles.doorTitleXiu, betChoice === 'XIU' && styles.doorTitleActive]}>XỈU</Text>
@@ -283,14 +372,25 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
                     <Text style={styles.doorTotalBetText}>{totalXiuPool.toLocaleString('vi-VN')}</Text>
                   </View>
                   <View style={styles.doorMyBet}>
-                    <Text style={styles.doorMyBetText}>{betChoice === 'XIU' ? betAmount.toLocaleString('vi-VN') : '0'}</Text>
+                    <Text style={styles.doorMyBetText}>{(placedBetXiu + (betChoice === 'XIU' ? betAmount : 0)).toLocaleString('vi-VN')}</Text>
                   </View>
-                </TouchableOpacity>
+                </AnimatedTouchableOpacity>
               </View>
             </View>
 
           {/* LỊCH SỬ PHIÊN CHƠI */}
           <View style={styles.historyContainer}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 5 }}
+              ref={(ref) => {
+                // Tự động cuộn đến cuối (kết quả mới nhất) khi có dữ liệu mới
+                if (ref) {
+                  setTimeout(() => ref.scrollToEnd({ animated: true }), 100);
+                }
+              }}
+            >
               {history.map((res, index) => (
                 <View 
                   key={index} 
@@ -300,7 +400,8 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
                   ]} 
                 />
               ))}
-            </View>
+            </ScrollView>
+          </View>
 
             {/* ROW CHIPS */}
             <View style={styles.chipsWrapper}>
@@ -334,8 +435,13 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
                 <Text style={styles.actionBtnText}>HỦY</Text>
               </TouchableOpacity>
             </View>
-
         </ScrollView>
+        <CustomAlert 
+          visible={alertConfig.visible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+        />
       </View>
     </Modal>
   );
