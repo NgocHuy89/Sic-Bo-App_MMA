@@ -20,18 +20,12 @@ import {
   useWindowDimensions,
   Platform
 } from "react-native";
-import axios from 'axios';
-
+import api from '../../services/api';
 // ─── GAME CONFIG ──────────────────────────────────────────────────────────────
 const COLS = 3;
 const ROWS = 8;
 const BOMBS_PER_ROW = 1;
-// Nếu đang chạy trên Web -> dùng 'localhost'
-// Nếu đang chạy trên Điện thoại -> tự động dùng IP mạng LAN '192.168.1.30'
-const SERVER_IP = Platform.OS === 'web' ? 'localhost' : '192.168.1.30'; 
-
-// (Bạn nhớ đổi 192.168.1.30 thành IP thực tế của máy tính nếu nó bị thay đổi nhé)
-
+// Cấu hình IP tự động đã được chuyển qua services/api.js
 // Multiplier cho mỗi tầng (index 0 = tầng 1)
 const MULTIPLIERS = [1.42, 2.02, 2.88, 4.1, 5.84, 8.32, 11.85, 16.88];
 
@@ -350,10 +344,10 @@ const syncBalanceToDB = async (newBalance) => {
     }
 
     try {
-      const url = `http://${SERVER_IP}:3000/users/${currentUserId}`;
+      const url = `/users/${currentUserId}`;
       console.log("3. Đang gọi API tới link:", url);
       
-      const response = await axios.patch(url, { balance: newBalance });
+      const response = await api.patch(url, { balance: newBalance });
       console.log("✅ 4. LƯU THÀNH CÔNG! Dữ liệu phản hồi:", response.data);
     } catch (error) {
       console.error("❌ 4. LỖI CẬP NHẬT DB:", error.message);

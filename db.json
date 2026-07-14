@@ -18,7 +18,7 @@
       "role": "CUSTOMER",
       "full_name": "Nguyễn Văn A",
       "phone_number": "0123456789",
-      "balance": 80000,
+      "balance": 3762,
       "status": "ACTIVE",
       "created_at": "2024-01-02T00:00:00.000Z"
     },
@@ -93,8 +93,8 @@
       "created_at": "2024-01-04T20:05:00.000Z"
     },
     {
-      "id": "2",
-      "session_code": "#TX00002",
+      "id": "3",
+      "session_code": "#TX00003",
       "status": "COMPLETED",
       "dice_1": 1,
       "dice_2": 2,
@@ -104,8 +104,8 @@
       "created_at": "2024-01-04T20:05:00.000Z"
     },
     {
-      "id": "2",
-      "session_code": "#TX00002",
+      "id": "4",
+      "session_code": "#TX00004",
       "status": "COMPLETED",
       "dice_1": 6,
       "dice_2": 2,
@@ -115,8 +115,8 @@
       "created_at": "2024-01-04T20:05:00.000Z"
     },
     {
-      "id": "2",
-      "session_code": "#TX00002",
+      "id": "5",
+      "session_code": "#TX00005",
       "status": "COMPLETED",
       "dice_1": 1,
       "dice_2": 2,

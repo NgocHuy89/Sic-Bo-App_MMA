@@ -12,17 +12,14 @@ import {
   Alert, FlatList, useWindowDimensions, Animated, Easing,
   Platform // Đã thêm Platform để nhận diện thiết bị
 } from 'react-native';
-import axios from 'axios'; // Đã thêm thư viện Axios
-
+import api from '../../services/api';
 // ─── CONFIG ────────────────────────────────────────────────────────────────────
 const COUNTDOWN_SECS = 5;        // giây chờ giữa các phiên
 const PLANE_ENTRY_MS = 1000;     // ms máy bay trượt vào vị trí
 const K = 0.00025;               // tốc độ tăng multiplier: mult = e^(K*t)
 const MAX_TRAIL_DOTS = 120;      // số điểm tối đa trong trail
 
-// Cấu hình IP tự động (Web thì localhost, App thì IP máy LAN)
-const SERVER_IP = Platform.OS === 'web' ? 'localhost' : '192.168.1.30'; 
-
+// Cấu hình IP tự động đã được chuyển qua services/api.js
 const computeMult = (ms) => Math.pow(Math.E, K * ms);
 
 const generateCrashPoint = () => {
@@ -61,7 +58,7 @@ export default function CrashGameScreen({ navigation, route }) {
       return; 
     }
     try {
-      await axios.patch(`http://${SERVER_IP}:3000/users/${currentUserId}`, {
+      await api.patch(`/users/${currentUserId}`, {
         balance: newBalance
       });
       console.log(`[CrashGame] Đã đồng bộ số dư: ${newBalance}`);
