@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AdminDashboard from './AdminDashboard';
 import AdminUserList from './AdminUserList';
@@ -20,6 +20,8 @@ function TabIcon({ emoji, focused }) {
 
 // ─── Header with logout ────────────────────────────────────────────────────────
 function AdminHeader({ navigation, user }) {
+  const insets = useSafeAreaInsets();
+
   const handleLogout = () => {
     Alert.alert(
       'Đăng xuất',
@@ -39,15 +41,17 @@ function AdminHeader({ navigation, user }) {
   };
 
   return (
-    <View style={header.bar}>
-      <View>
+    <SafeAreaView edges={['top', 'left', 'right']} style={{ backgroundColor: '#1E0505' }}>
+      <View style={header.bar}>
+        <View>
         <Text style={header.title}>👑 ADMIN PANEL</Text>
         <Text style={header.sub}>Xin chào, {user?.full_name || 'Admin'}</Text>
       </View>
       <TouchableOpacity style={header.logoutBtn} onPress={handleLogout}>
         <Text style={header.logoutText}>🚪 Xuất</Text>
       </TouchableOpacity>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -61,10 +65,10 @@ export default function AdminScreen({ navigation, route }) {
     tabBarStyle: {
       backgroundColor: '#1E0505',
       borderTopColor: '#D4AF37',
-      borderTopWidth: 1.5,
-      height: 58,
-      paddingBottom: 6,
-      paddingTop: 4,
+      borderTopWidth: 1,
+      height: 45,
+      paddingBottom: 5,
+      paddingTop: 5,
     },
     tabBarLabelStyle: {
       fontSize: 10,
@@ -116,12 +120,11 @@ export default function AdminScreen({ navigation, route }) {
 // ─── Styles ────────────────────────────────────────────────────────────────────
 const header = StyleSheet.create({
   bar: {
-    backgroundColor: '#1E0505',
-    borderBottomWidth: 1.5,
+    backgroundColor: '#350A0A',
+    borderBottomWidth: 1,
     borderBottomColor: '#D4AF37',
-    paddingHorizontal: 16,
-    paddingTop: 48,
-    paddingBottom: 12,
+    padding: 10,
+    marginBottom: 5,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
