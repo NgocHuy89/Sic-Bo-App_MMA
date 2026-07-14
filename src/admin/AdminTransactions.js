@@ -15,9 +15,8 @@ const formatDateTime = (d) => {
 };
 
 const STATUS_CONFIG = {
-  PENDING:  { label: 'Chờ duyệt', color: '#FF9800', bg: '#3D2800' },
-  APPROVED: { label: 'Đã duyệt',  color: '#4CAF50', bg: '#1B3D1B' },
-  REJECTED: { label: 'Từ chối',   color: '#FF4444', bg: '#3D1B1B' },
+  PENDING:   { label: 'Chờ duyệt',  color: '#FF9800', bg: '#3D2800' },
+  COMPLETED: { label: 'Hoàn thành', color: '#4CAF50', bg: '#1B3D1B' },
 };
 
 const TYPE_CONFIG = {
@@ -26,13 +25,29 @@ const TYPE_CONFIG = {
 };
 
 // ─── Status Badge ──────────────────────────────────────────────────────────────
-function StatusBadge({ status }) {
-  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.PENDING;
-  return (
-    <View style={[badge.box, { backgroundColor: cfg.bg }]}>
-      <Text style={[badge.text, { color: cfg.color }]}>{cfg.label}</Text>
-    </View>
-  );
+function StatusBadge({ tx }) {
+  if (tx.status === 'PENDING') {
+    return (
+      <View style={[badge.box, { backgroundColor: '#3D2800' }]}>
+        <Text style={[badge.text, { color: '#FF9800' }]}>Chờ duyệt</Text>
+      </View>
+    );
+  }
+  if (tx.status === 'COMPLETED') {
+    if (tx.reject_reason) {
+      return (
+        <View style={[badge.box, { backgroundColor: '#3D1B1B' }]}>
+          <Text style={[badge.text, { color: '#FF4444' }]}>Từ chối</Text>
+        </View>
+      );
+    }
+    return (
+      <View style={[badge.box, { backgroundColor: '#1B3D1B' }]}>
+        <Text style={[badge.text, { color: '#4CAF50' }]}>Đã duyệt</Text>
+      </View>
+    );
+  }
+  return null;
 }
 
 // ─── Reject Modal ──────────────────────────────────────────────────────────────
@@ -55,7 +70,7 @@ function RejectModal({ visible, onClose, onConfirm }) {
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']}>
       <View style={rejectModal.overlay}>
         <View style={rejectModal.box}>
           <Text style={rejectModal.title}>❌ Lý Do Từ Chối</Text>
@@ -95,7 +110,7 @@ function TxDetailModal({ visible, tx, userName, onClose, onApprove, onReject }) 
   const isPending = tx.status === 'PENDING';
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']}>
       <View style={detailModal.overlay}>
         <View style={detailModal.box}>
           <ScrollView showsVerticalScrollIndicator={false}>
@@ -116,12 +131,26 @@ function TxDetailModal({ visible, tx, userName, onClose, onApprove, onReject }) 
 
             <InfoRow label="Mã GD" value={`#${tx.id}`} />
             <InfoRow label="Người dùng" value={userName} />
-            <InfoRow label="Trạng thái" value={<StatusBadge status={tx.status} />} />
+            <InfoRow label="Trạng thái" value={<StatusBadge tx={tx} />} />
             <InfoRow label="Ngày tạo" value={formatDateTime(tx.created_at)} />
             <InfoRow label="Cập nhật" value={formatDateTime(tx.updated_at)} />
             {tx.reject_reason ? (
               <InfoRow label="Lý do từ chối" value={tx.reject_reason} accent="#FF4444" />
             ) : null}
+
+            {tx.type === 'DEPOSIT' && tx.verification_code && (
+              <InfoRow label="Nội dung CK" value={tx.verification_code} accent="#D4AF37" />
+            )}
+
+            {tx.type === 'WITHDRAW' && tx.bank_info && (
+              <>
+                <View style={detailModal.divider} />
+                <Text style={detailModal.actionLabel}>🏦 Thông Tin Nhận Tiền</Text>
+                <InfoRow label="Ngân hàng" value={tx.bank_info.bankName} />
+                <InfoRow label="Số tài khoản" value={tx.bank_info.accountNumber} accent="#D4AF37" />
+                <InfoRow label="Chủ tài khoản" value={tx.bank_info.accountName} />
+              </>
+            )}
 
             {isPending && (
               <>
@@ -173,7 +202,7 @@ function TxCard({ tx, userName, onPress, onQuickApprove, onQuickReject }) {
         </View>
         <View style={styles.cardRight}>
           <Text style={[styles.cardAmount, { color: typeCfg.color }]}>{formatVND(tx.amount)}</Text>
-          <StatusBadge status={tx.status} />
+          <StatusBadge tx={tx} />
         </View>
       </View>
 
@@ -201,6 +230,7 @@ function TxCard({ tx, userName, onPress, onQuickApprove, onQuickReject }) {
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function AdminTransactions({ route }) {
   const adminUser = route?.params?.user || {};
+  const fixedType = route?.params?.transactionType;
 
   const [transactions, setTransactions] = useState([]);
   const [users, setUsers] = useState({});
@@ -208,7 +238,7 @@ export default function AdminTransactions({ route }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filterStatus, setFilterStatus] = useState('PENDING');
-  const [filterType, setFilterType] = useState('ALL');
+  const [filterType, setFilterType] = useState(fixedType || 'ALL');
   const [selectedTx, setSelectedTx] = useState(null);
   const [detailVisible, setDetailVisible] = useState(false);
   const [rejectTarget, setRejectTarget] = useState(null);
@@ -266,15 +296,16 @@ export default function AdminTransactions({ route }) {
     try {
       // Cập nhật balance trước để đảm bảo tính nhất quán
       await api.patch(`/users/${tx.user_id}`, { balance: newBalance });
-      // Sau đó mới đánh dấu transaction là APPROVED
+      // Sau đó mới đánh dấu transaction là COMPLETED
       await api.patch(`/transactions/${tx.id}`, {
-        status: 'APPROVED',
+        status: 'COMPLETED',
+        reject_reason: '',
         processed_by: adminUser.id || '1',
         updated_at: new Date().toISOString(),
       });
 
       setTransactions(prev =>
-        prev.map(t => t.id === tx.id ? { ...t, status: 'APPROVED', updated_at: new Date().toISOString() } : t)
+        prev.map(t => t.id === tx.id ? { ...t, status: 'COMPLETED', reject_reason: '', updated_at: new Date().toISOString() } : t)
       );
       setUsers(prev => ({ ...prev, [tx.user_id]: { ...prev[tx.user_id], balance: newBalance } }));
       setDetailVisible(false);
@@ -306,13 +337,13 @@ export default function AdminTransactions({ route }) {
     if (!tx) return;
     try {
       await api.patch(`/transactions/${tx.id}`, {
-        status: 'REJECTED',
+        status: 'COMPLETED',
         reject_reason: reason,
         processed_by: adminUser.id || '1',
         updated_at: new Date().toISOString(),
       });
       setTransactions(prev =>
-        prev.map(t => t.id === tx.id ? { ...t, status: 'REJECTED', reject_reason: reason } : t)
+        prev.map(t => t.id === tx.id ? { ...t, status: 'COMPLETED', reject_reason: reason } : t)
       );
       setRejectVisible(false);
       setRejectTarget(null);
@@ -324,7 +355,7 @@ export default function AdminTransactions({ route }) {
 
   const openDetail = (tx) => { setSelectedTx(tx); setDetailVisible(true); };
 
-  const pendingCount = transactions.filter(t => t.status === 'PENDING').length;
+  const pendingCount = transactions.filter(t => t.status === 'PENDING' && (fixedType ? t.type === fixedType : true)).length;
 
   if (loading) {
     return (
@@ -337,43 +368,47 @@ export default function AdminTransactions({ route }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.pageTitle}>💳 QUẢN LÝ GIAO DỊCH</Text>
+      <Text style={styles.pageTitle}>
+        {fixedType === 'DEPOSIT' ? '📥 QUẢN LÝ NẠP TIỀN' : fixedType === 'WITHDRAW' ? '📤 QUẢN LÝ RÚT TIỀN' : '💳 QUẢN LÝ GIAO DỊCH'}
+      </Text>
 
       {pendingCount > 0 && (
         <View style={styles.alertBanner}>
-          <Text style={styles.alertText}>⚠️ Có {pendingCount} giao dịch đang chờ duyệt!</Text>
+          <Text style={styles.alertText}>⚠️ Có {pendingCount} giao dịch {fixedType === 'DEPOSIT' ? 'nạp' : fixedType === 'WITHDRAW' ? 'rút' : ''} đang chờ duyệt!</Text>
         </View>
       )}
 
       {/* Filter: Status */}
       <View style={styles.filterRow}>
-        {['PENDING', 'APPROVED', 'REJECTED', 'ALL'].map(s => (
+        {['PENDING', 'COMPLETED', 'ALL'].map(s => (
           <TouchableOpacity
             key={s}
             style={[styles.filterTab, filterStatus === s && styles.filterTabActive]}
             onPress={() => setFilterStatus(s)}
           >
             <Text style={[styles.filterTabText, filterStatus === s && styles.filterTabTextActive]}>
-              {s === 'ALL' ? 'Tất cả' : STATUS_CONFIG[s]?.label || s}
+              {s === 'ALL' ? 'Tất cả' : s === 'COMPLETED' ? 'Đã xử lý' : 'Chờ duyệt'}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
       {/* Filter: Type */}
-      <View style={styles.typeRow}>
-        {['ALL', 'DEPOSIT', 'WITHDRAW'].map(t => (
-          <TouchableOpacity
-            key={t}
-            style={[styles.typeTab, filterType === t && styles.typeTabActive]}
-            onPress={() => setFilterType(t)}
-          >
-            <Text style={[styles.typeTabText, filterType === t && styles.typeTabTextActive]}>
-              {t === 'ALL' ? 'Tất cả' : TYPE_CONFIG[t]?.label || t}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {!fixedType && (
+        <View style={styles.typeRow}>
+          {['ALL', 'DEPOSIT', 'WITHDRAW'].map(t => (
+            <TouchableOpacity
+              key={t}
+              style={[styles.typeTab, filterType === t && styles.typeTabActive]}
+              onPress={() => setFilterType(t)}
+            >
+              <Text style={[styles.typeTabText, filterType === t && styles.typeTabTextActive]}>
+                {t === 'ALL' ? 'Tất cả' : TYPE_CONFIG[t]?.label || t}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       <Text style={styles.summary}>Hiển thị {filtered.length} giao dịch</Text>
 

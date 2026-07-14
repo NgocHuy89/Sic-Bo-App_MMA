@@ -30,8 +30,9 @@ const CHIPS = [
 ];
 
 export default function SicBoModal({ visible, onClose, balance, onBetSuccess, timeLeft, gamePhase, placedBetTai = 0, placedBetXiu = 0, onCancelPlacedBets, onResult }) {
-  const { width } = useWindowDimensions();
-  const styles = getStyles(width);
+  const { width, height } = useWindowDimensions();
+  const isPortrait = height > width;
+  const styles = getStyles(width, height, isPortrait);
 
   // Cho phép tất cả hướng xoay khi modal mở — hoạt động trên Android lẫn iOS
   useEffect(() => {
@@ -173,7 +174,7 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
         ).start();
 
         if (onResult) {
-          onResult(resultText);
+          onResult(resultText, r1 + 1, r2 + 1, r3 + 1, sum);
         }
       }
     }
@@ -197,17 +198,36 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
     ];
   };
 
+  const [minBet, setMinBet] = useState(10000);
+  const [maxBet, setMaxBet] = useState(10000000);
+
   useEffect(() => {
     if (visible) {
       fetchHistory();
+      fetchConfigs();
     }
   }, [visible]);
+
+  const fetchConfigs = async () => {
+    try {
+      const response = await api.get('/system_configs');
+      if (response.data) {
+        const minConfig = response.data.find(c => c.key === 'MIN_BET');
+        const maxConfig = response.data.find(c => c.key === 'MAX_BET');
+        if (minConfig) setMinBet(parseInt(minConfig.value, 10));
+        if (maxConfig) setMaxBet(parseInt(maxConfig.value, 10));
+      }
+    } catch (error) {
+      console.log('Error fetching configs:', error);
+    }
+  };
 
   const fetchHistory = async () => {
     try {
       const response = await api.get('/game_sessions?status=COMPLETED');
       if (response.data) {
-        const results = response.data
+        const sorted = response.data.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        const results = sorted
           .map(session => session.result ? session.result.toUpperCase() : null)
           .filter(res => res === 'TAI' || res === 'XIU')
           .slice(-14); // Giới hạn 14 kết quả hiển thị cho vừa màn hình
@@ -227,7 +247,7 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
   };
 
   const handleAllIn = () => {
-    setBetAmount(balance);
+    setBetAmount(Math.min(balance, maxBet));
   };
 
   const handleCloseModal = () => {
@@ -262,6 +282,14 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
       showAlert("Lỗi", "Vui lòng đặt cược số tiền hợp lệ!");
       return;
     }
+    if (betAmount < minBet) {
+      showAlert("Lỗi", `Mức cược tối thiểu là ${minBet.toLocaleString('vi-VN')} đ!`);
+      return;
+    }
+    if (betAmount > maxBet) {
+      showAlert("Lỗi", `Mức cược tối đa là ${maxBet.toLocaleString('vi-VN')} đ!`);
+      return;
+    }
     if (betAmount > balance) {
       showAlert("Lỗi", "Số dư không đủ để đặt cược!");
       return;
@@ -272,6 +300,84 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
     setBetAmount(0);
     setBetChoice(null);
   };
+
+  const renderTaiPanel = () => (
+    <AnimatedTouchableOpacity 
+      style={[
+        styles.doorPanel, 
+        isPortrait && styles.doorPanelPortrait,
+        betChoice === 'TAI' && styles.doorPanelActive,
+        winningChoice === 'TAI' && { borderColor: '#FBE8A6', borderWidth: 4, backgroundColor: 'rgba(229, 185, 92, 0.3)', shadowColor: '#FBE8A6', shadowOpacity: 1, shadowRadius: 15, elevation: 10 },
+        { transform: [{ scale: pulseAnimTai }] }
+      ]}
+      onPress={() => setBetChoice('TAI')}
+    >
+      <Text style={[styles.doorTitle, styles.doorTitleTai, betChoice === 'TAI' && styles.doorTitleActive]}>TÀI</Text>
+      <View style={styles.doorTotalBet}>
+        <Text style={styles.doorTotalBetText}>{totalTaiPool.toLocaleString('vi-VN')}</Text>
+      </View>
+      <View style={styles.doorMyBet}>
+        <Text style={styles.doorMyBetText}>{(placedBetTai + (betChoice === 'TAI' ? betAmount : 0)).toLocaleString('vi-VN')}</Text>
+      </View>
+    </AnimatedTouchableOpacity>
+  );
+
+  const renderXiuPanel = () => (
+    <AnimatedTouchableOpacity 
+      style={[
+        styles.doorPanel, 
+        isPortrait && styles.doorPanelPortrait,
+        betChoice === 'XIU' && styles.doorPanelActive,
+        winningChoice === 'XIU' && { borderColor: '#FBE8A6', borderWidth: 4, backgroundColor: 'rgba(229, 185, 92, 0.3)', shadowColor: '#FBE8A6', shadowOpacity: 1, shadowRadius: 15, elevation: 10 },
+        { transform: [{ scale: pulseAnimXiu }] }
+      ]}
+      onPress={() => setBetChoice('XIU')}
+    >
+      <Text style={[styles.doorTitle, styles.doorTitleXiu, betChoice === 'XIU' && styles.doorTitleActive]}>XỈU</Text>
+      <View style={styles.doorTotalBet}>
+        <Text style={styles.doorTotalBetText}>{totalXiuPool.toLocaleString('vi-VN')}</Text>
+      </View>
+      <View style={styles.doorMyBet}>
+        <Text style={styles.doorMyBetText}>{(placedBetXiu + (betChoice === 'XIU' ? betAmount : 0)).toLocaleString('vi-VN')}</Text>
+      </View>
+    </AnimatedTouchableOpacity>
+  );
+
+  const renderDiceCenter = () => (
+    <View style={[styles.diceCenterContainer, isPortrait && styles.diceCenterContainerPortrait]}>
+      <View style={[styles.diceIconGroup, isPortrait && styles.diceIconGroupPortrait]}>
+        <Animated.View style={[{ position: 'absolute', transform: getTransform(pos1, rot1) }]}>
+          <View style={{ width: 28, height: 28, borderRadius: 8, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ position: 'absolute', width: '100%', height: '100%', backgroundColor: diceResults[0] === 'dice-one' ? '#D31A1A' : '#000000' }} />
+            <FontAwesome5 name={diceResults[0]} size={35} color="#FFFFFF" solid style={{ position: 'absolute' }} />
+          </View>
+        </Animated.View>
+        <Animated.View style={[{ position: 'absolute', transform: getTransform(pos2, rot2) }]}>
+          <View style={{ width: 28, height: 28, borderRadius: 8, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ position: 'absolute', width: '100%', height: '100%', backgroundColor: diceResults[1] === 'dice-one' ? '#D31A1A' : '#000000' }} />
+            <FontAwesome5 name={diceResults[1]} size={35} color="#FFFFFF" solid style={{ position: 'absolute' }} />
+          </View>
+        </Animated.View>
+        <Animated.View style={[{ position: 'absolute', transform: getTransform(pos3, rot3) }]}>
+          <View style={{ width: 28, height: 28, borderRadius: 8, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ position: 'absolute', width: '100%', height: '100%', backgroundColor: diceResults[2] === 'dice-one' ? '#D31A1A' : '#000000' }} />
+            <FontAwesome5 name={diceResults[2]} size={35} color="#FFFFFF" solid style={{ position: 'absolute' }} />
+          </View>
+        </Animated.View>
+      </View>
+      {betAmount > 0 && (
+        <View style={styles.centerBetHighlight}>
+          <Text 
+            style={styles.centerBetText}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            +{betAmount.toLocaleString('vi-VN')}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
 
   return (
     <Modal
@@ -302,95 +408,26 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
             </View>
 
             <View style={styles.boardContainer}>
-              <View style={styles.boardContent}>
-                {/* PANEL TÀI */}
-                <AnimatedTouchableOpacity 
-                  style={[
-                    styles.doorPanel, 
-                    betChoice === 'TAI' && styles.doorPanelActive,
-                    winningChoice === 'TAI' && { borderColor: '#FBE8A6', borderWidth: 4, backgroundColor: 'rgba(229, 185, 92, 0.3)', shadowColor: '#FBE8A6', shadowOpacity: 1, shadowRadius: 15, elevation: 10 },
-                    { transform: [{ scale: pulseAnimTai }] }
-                  ]}
-                  onPress={() => setBetChoice('TAI')}
-                >
-                  <Text style={[styles.doorTitle, styles.doorTitleTai, betChoice === 'TAI' && styles.doorTitleActive]}>TÀI</Text>
-                  <View style={styles.doorTotalBet}>
-                    <Text style={styles.doorTotalBetText}>{totalTaiPool.toLocaleString('vi-VN')}</Text>
+              {isPortrait ? (
+                <View style={styles.boardContentPortrait}>
+                  {renderDiceCenter()}
+                  <View style={styles.doorsRowPortrait}>
+                    {renderTaiPanel()}
+                    {renderXiuPanel()}
                   </View>
-                  <View style={styles.doorMyBet}>
-                    <Text style={styles.doorMyBetText}>{(placedBetTai + (betChoice === 'TAI' ? betAmount : 0)).toLocaleString('vi-VN')}</Text>
-                  </View>
-                </AnimatedTouchableOpacity>
-
-                {/* DÍCE CENTER */}
-                <View style={styles.diceCenterContainer}>
-                  <View style={styles.diceIconGroup}>
-                    <Animated.View style={[{ position: 'absolute', transform: getTransform(pos1, rot1) }]}>
-                      <View style={{ width: 28, height: 28, borderRadius: 8, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
-                        <View style={{ position: 'absolute', width: '100%', height: '100%', backgroundColor: diceResults[0] === 'dice-one' ? '#D31A1A' : '#000000' }} />
-                        <FontAwesome5 name={diceResults[0]} size={35} color="#FFFFFF" solid style={{ position: 'absolute' }} />
-                      </View>
-                    </Animated.View>
-                    <Animated.View style={[{ position: 'absolute', transform: getTransform(pos2, rot2) }]}>
-                      <View style={{ width: 28, height: 28, borderRadius: 8, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
-                        <View style={{ position: 'absolute', width: '100%', height: '100%', backgroundColor: diceResults[1] === 'dice-one' ? '#D31A1A' : '#000000' }} />
-                        <FontAwesome5 name={diceResults[1]} size={35} color="#FFFFFF" solid style={{ position: 'absolute' }} />
-                      </View>
-                    </Animated.View>
-                    <Animated.View style={[{ position: 'absolute', transform: getTransform(pos3, rot3) }]}>
-                      <View style={{ width: 28, height: 28, borderRadius: 8, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
-                        <View style={{ position: 'absolute', width: '100%', height: '100%', backgroundColor: diceResults[2] === 'dice-one' ? '#D31A1A' : '#000000' }} />
-                        <FontAwesome5 name={diceResults[2]} size={35} color="#FFFFFF" solid style={{ position: 'absolute' }} />
-                      </View>
-                    </Animated.View>
-                  </View>
-                  {betAmount > 0 && (
-                    <View style={styles.centerBetHighlight}>
-                      <Text 
-                        style={styles.centerBetText}
-                        numberOfLines={1}
-                        adjustsFontSizeToFit
-                      >
-                        +{betAmount.toLocaleString('vi-VN')}
-                      </Text>
-                    </View>
-                  )}
                 </View>
-
-                {/* PANEL XỈU */}
-                <AnimatedTouchableOpacity 
-                  style={[
-                    styles.doorPanel, 
-                    betChoice === 'XIU' && styles.doorPanelActive,
-                    winningChoice === 'XIU' && { borderColor: '#FBE8A6', borderWidth: 4, backgroundColor: 'rgba(229, 185, 92, 0.3)', shadowColor: '#FBE8A6', shadowOpacity: 1, shadowRadius: 15, elevation: 10 },
-                    { transform: [{ scale: pulseAnimXiu }] }
-                  ]}
-                  onPress={() => setBetChoice('XIU')}
-                >
-                  <Text style={[styles.doorTitle, styles.doorTitleXiu, betChoice === 'XIU' && styles.doorTitleActive]}>XỈU</Text>
-                  <View style={styles.doorTotalBet}>
-                    <Text style={styles.doorTotalBetText}>{totalXiuPool.toLocaleString('vi-VN')}</Text>
-                  </View>
-                  <View style={styles.doorMyBet}>
-                    <Text style={styles.doorMyBetText}>{(placedBetXiu + (betChoice === 'XIU' ? betAmount : 0)).toLocaleString('vi-VN')}</Text>
-                  </View>
-                </AnimatedTouchableOpacity>
-              </View>
+              ) : (
+                <View style={styles.boardContent}>
+                  {renderTaiPanel()}
+                  {renderDiceCenter()}
+                  {renderXiuPanel()}
+                </View>
+              )}
             </View>
 
           {/* LỊCH SỬ PHIÊN CHƠI */}
           <View style={styles.historyContainer}>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
-              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 5 }}
-              ref={(ref) => {
-                // Tự động cuộn đến cuối (kết quả mới nhất) khi có dữ liệu mới
-                if (ref) {
-                  setTimeout(() => ref.scrollToEnd({ animated: true }), 100);
-                }
-              }}
-            >
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 5 }}>
               {history.map((res, index) => (
                 <View 
                   key={index} 
@@ -400,7 +437,7 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
                   ]} 
                 />
               ))}
-            </ScrollView>
+            </View>
           </View>
 
             {/* ROW CHIPS */}
@@ -409,7 +446,7 @@ export default function SicBoModal({ visible, onClose, balance, onBetSuccess, ti
                 {CHIPS.map((chip, index) => (
                   <TouchableOpacity 
                     key={index} 
-                    style={styles.chipButton}
+                    style={[styles.chipButton, { width: isPortrait ? '22%' : 'auto', marginBottom: isPortrait ? 10 : 0 }]}
                     onPress={() => handleAddChip(chip.value)}
                   >
                     <Text style={styles.chipText}>{chip.label}</Text>

@@ -5,7 +5,8 @@ import {
   StyleSheet, 
   TouchableOpacity, 
   Animated, 
-  Easing 
+  Easing,
+  Modal
 } from 'react-native';
 
 const CustomAlert = ({ visible, title, message, buttons, onClose }) => {
@@ -45,10 +46,14 @@ const CustomAlert = ({ visible, title, message, buttons, onClose }) => {
   }, [visible, fadeAnim, scaleAnim]);
 
   return (
-    <View 
-      style={[StyleSheet.absoluteFill, { zIndex: 9999, elevation: 9999 }]} 
-      pointerEvents={visible ? 'auto' : 'none'}
+    <Modal 
+      transparent 
+      visible={visible} 
+      animationType="none" 
+      onRequestClose={onClose}
+      supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']}
     >
+      <View style={[StyleSheet.absoluteFill, { zIndex: 9999, elevation: 9999 }]}>
       <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
         <Animated.View style={[styles.alertBox, { transform: [{ scale: scaleAnim }] }]}>
           {title ? <Text style={styles.title}>{title}</Text> : null}
@@ -56,18 +61,30 @@ const CustomAlert = ({ visible, title, message, buttons, onClose }) => {
           
           <View style={styles.buttonContainer}>
             {buttons && buttons.length > 0 ? (
-              buttons.map((btn, index) => (
-                <TouchableOpacity 
-                  key={index}
-                  style={[styles.button, btn.style]} 
-                  onPress={() => {
-                    if (btn.onPress) btn.onPress();
-                    if (onClose && !btn.preventClose) onClose();
-                  }}
-                >
-                  <Text style={[styles.buttonText, btn.textStyle]}>{btn.text}</Text>
-                </TouchableOpacity>
-              ))
+              buttons.map((btn, index) => {
+                let customStyle = {};
+                let customTextStyle = {};
+                if (btn.style === 'cancel') {
+                  customStyle = { backgroundColor: '#5A2A2A', borderColor: '#A07855' };
+                  customTextStyle = { color: '#F9E596' };
+                } else if (btn.style === 'destructive') {
+                  customStyle = { backgroundColor: '#FF4444', borderColor: '#FF0000' };
+                  customTextStyle = { color: '#FFF' };
+                }
+
+                return (
+                  <TouchableOpacity 
+                    key={index}
+                    style={[styles.button, typeof btn.style === 'object' ? btn.style : customStyle]} 
+                    onPress={() => {
+                      if (btn.onPress) btn.onPress();
+                      if (onClose && !btn.preventClose) onClose();
+                    }}
+                  >
+                    <Text style={[styles.buttonText, typeof btn.textStyle === 'object' ? btn.textStyle : customTextStyle]}>{btn.text}</Text>
+                  </TouchableOpacity>
+                );
+              })
             ) : (
               <TouchableOpacity style={styles.button} onPress={onClose}>
                 <Text style={styles.buttonText}>OK</Text>
@@ -76,7 +93,8 @@ const CustomAlert = ({ visible, title, message, buttons, onClose }) => {
           </View>
         </Animated.View>
       </Animated.View>
-    </View>
+      </View>
+    </Modal>
   );
 };
 

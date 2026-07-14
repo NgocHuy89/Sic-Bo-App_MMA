@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useWindowDimensions } from 'react-native';
 
 import AdminDashboard from './AdminDashboard';
 import AdminUserList from './AdminUserList';
@@ -21,6 +22,8 @@ function TabIcon({ emoji, focused }) {
 // ─── Header with logout ────────────────────────────────────────────────────────
 function AdminHeader({ navigation, user }) {
   const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isPortrait = height > width;
 
   const handleLogout = () => {
     Alert.alert(
@@ -42,14 +45,14 @@ function AdminHeader({ navigation, user }) {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={{ backgroundColor: '#1E0505' }}>
-      <View style={header.bar}>
+      <View style={[header.bar, !isPortrait && { padding: 4, marginBottom: 2 }]}>
         <View>
-        <Text style={header.title}>👑 ADMIN PANEL</Text>
-        <Text style={header.sub}>Xin chào, {user?.full_name || 'Admin'}</Text>
-      </View>
-      <TouchableOpacity style={header.logoutBtn} onPress={handleLogout}>
-        <Text style={header.logoutText}>🚪 Xuất</Text>
-      </TouchableOpacity>
+          <Text style={[header.title, !isPortrait && { fontSize: 14 }]}>👑 ADMIN PANEL</Text>
+          <Text style={[header.sub, !isPortrait && { fontSize: 10, marginTop: 0 }]}>Xin chào, {user?.full_name || 'Admin'}</Text>
+        </View>
+        <TouchableOpacity style={[header.logoutBtn, !isPortrait && { paddingHorizontal: 10, paddingVertical: 4 }]} onPress={handleLogout}>
+          <Text style={[header.logoutText, !isPortrait && { fontSize: 11 }]}>Đăng xuất</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -58,6 +61,8 @@ function AdminHeader({ navigation, user }) {
 // ─── Main Admin Screen (Tab Navigator) ────────────────────────────────────────
 export default function AdminScreen({ navigation, route }) {
   const user = route?.params?.user || {};
+  const { width, height } = useWindowDimensions();
+  const isPortrait = height > width;
 
   const tabOptions = {
     headerShown: true,
@@ -66,8 +71,8 @@ export default function AdminScreen({ navigation, route }) {
       backgroundColor: '#1E0505',
       borderTopColor: '#D4AF37',
       borderTopWidth: 1,
-      height: 45,
-      paddingBottom: 5,
+      height: isPortrait ? 60 : 50,
+      paddingBottom: isPortrait ? 10 : 5,
       paddingTop: 5,
     },
     tabBarLabelStyle: {
@@ -97,12 +102,21 @@ export default function AdminScreen({ navigation, route }) {
         }}
       />
       <Tab.Screen
-        name="Transactions"
+        name="Deposits"
         component={AdminTransactions}
-        initialParams={{ user }}
+        initialParams={{ user, transactionType: 'DEPOSIT' }}
         options={{
-          tabBarLabel: 'Giao dịch',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="💳" focused={focused} />,
+          tabBarLabel: 'Nạp tiền',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="📥" focused={focused} />,
+        }}
+      />
+      <Tab.Screen
+        name="Withdraws"
+        component={AdminTransactions}
+        initialParams={{ user, transactionType: 'WITHDRAW' }}
+        options={{
+          tabBarLabel: 'Rút tiền',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="📤" focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -140,17 +154,15 @@ const header = StyleSheet.create({
     marginTop: 2,
   },
   logoutBtn: {
-    backgroundColor: '#350A0A',
-    borderWidth: 1,
-    borderColor: '#7B1C1C',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    backgroundColor: '#A020F0',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
   },
   logoutText: {
-    color: '#FF4444',
-    fontWeight: '700',
-    fontSize: 13,
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
 

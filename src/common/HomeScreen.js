@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Animated,
   Easing,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -43,6 +44,9 @@ const GAMES = [
 ];
 
 export default function HomeScreen({ navigation, route }) {
+  const { width, height } = useWindowDimensions();
+  const isPortrait = height > width;
+
   const user = route?.params?.user || null;
   const initialBalance = user ? user.balance : 0;
   const fullName = user ? user.full_name : 'Người chơi Vô danh';
@@ -85,6 +89,47 @@ export default function HomeScreen({ navigation, route }) {
   // States for Global Game Loop
   const [timeLeft, setTimeLeft] = useState(60);
   const [gamePhase, setGamePhase] = useState('BETTING'); // 'BETTING' | 'RESULT'
+  const [currentSessionId, setCurrentSessionId] = useState(null);
+
+  const createNewSession = async () => {
+    try {
+      const newSession = {
+        session_code: `#TX${Date.now().toString().slice(-5)}`,
+        status: 'BETTING',
+        dice_1: null,
+        dice_2: null,
+        dice_3: null,
+        total_score: null,
+        result: null,
+        created_at: new Date().toISOString()
+      };
+      const res = await api.post('/game_sessions', newSession);
+      setCurrentSessionId(res.data.id);
+
+      // Rolling window logic: keep max 50 sessions
+      const allRes = await api.get('/game_sessions');
+      let allSessions = allRes.data;
+      if (allSessions.length > 50) {
+        allSessions.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        const sessionsToDelete = allSessions.slice(0, allSessions.length - 50);
+        for (const s of sessionsToDelete) {
+           if (s.id !== 'current') {
+             try {
+               await api.delete(`/game_sessions/${s.id}`);
+             } catch (delError) {} // Ignore if already deleted by another client
+           }
+        }
+      }
+    } catch (e) {
+      console.log('Create session error', e);
+    }
+  };
+
+  useEffect(() => {
+    if (gamePhase === 'BETTING') {
+      createNewSession();
+    }
+  }, [gamePhase]);
 
   useEffect(() => {
     if (user?.balance !== undefined) {
@@ -242,7 +287,7 @@ export default function HomeScreen({ navigation, route }) {
     });
   };
 
-  const handleGameResult = (resultText) => {
+  const handleGameResult = async (resultText, dice1, dice2, dice3, total) => {
     const currentBetTai = placedBetTaiRef.current;
     const currentBetXiu = placedBetXiuRef.current;
 
@@ -257,21 +302,36 @@ export default function HomeScreen({ navigation, route }) {
       updateBalance(reward);
       triggerWinAnimation(reward);
     }
+
+    if (currentSessionId) {
+      try {
+        await api.patch(`/game_sessions/${currentSessionId}`, {
+          status: 'COMPLETED',
+          dice_1: dice1,
+          dice_2: dice2,
+          dice_3: dice3,
+          total_score: total,
+          result: resultText
+        });
+      } catch (e) {
+        console.log('Update session error:', e);
+      }
+    }
   };
 
   const renderGameCard = ({ item }) => (
     <TouchableOpacity
-      style={[styles.card, { backgroundColor: item.color }]}
+      style={[styles.card, { backgroundColor: item.color, width: isPortrait ? '100%' : '48%' }]}
       onPress={() => handlePlayGame(item.id)}
     >
-      <View style={styles.cardContent}>
-        <Text style={styles.cardIcon}>{item.icon}</Text>
+      <View style={[styles.cardContent, isPortrait && { paddingVertical: 30 }]}>
+        <Text style={[styles.cardIcon, isPortrait && { fontSize: 80, marginBottom: 20 }]}>{item.icon}</Text>
         <View style={styles.cardTextContainer}>
-          <Text style={styles.cardTitle}>{item.title}</Text>
-          <Text style={styles.cardSubtitle}>{item.subtitle}</Text>
+          <Text style={[styles.cardTitle, isPortrait && { fontSize: 24 }]}>{item.title}</Text>
+          <Text style={[styles.cardSubtitle, isPortrait && { fontSize: 14 }]}>{item.subtitle}</Text>
         </View>
-        <View style={styles.playButton}>
-          <Text style={styles.playButtonText}>CHƠI NGAY</Text>
+        <View style={[styles.playButton, isPortrait && { paddingVertical: 12, paddingHorizontal: 30 }]}>
+          <Text style={[styles.playButtonText, isPortrait && { fontSize: 16 }]}>CHƠI NGAY</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -295,12 +355,13 @@ export default function HomeScreen({ navigation, route }) {
       <Text style={styles.sectionTitle}>CÁC TRÒ CHƠI HẤP DẪN</Text>
 
       <FlatList
+        key={isPortrait ? '1col' : '2col'}
         data={GAMES}
         renderItem={renderGameCard}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
+        numColumns={isPortrait ? 1 : 2}
+        columnWrapperStyle={isPortrait ? undefined : styles.row}
         showsVerticalScrollIndicator={false}
       />
 

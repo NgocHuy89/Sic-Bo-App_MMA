@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   ActivityIndicator, RefreshControl, Alert, Modal,
-  TextInput, ScrollView,
+  TextInput, ScrollView, useWindowDimensions
 } from 'react-native';
 import api from '../services/api';
 
@@ -41,7 +41,7 @@ function UserDetailModal({ visible, user, onClose, onToggleStatus, onAdjustBalan
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']}>
       <View style={modal.overlay}>
         <View style={modal.box}>
           <ScrollView showsVerticalScrollIndicator={false}>
@@ -138,6 +138,9 @@ function UserCard({ user, onPress }) {
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function AdminUserList() {
+  const { width, height } = useWindowDimensions();
+  const isPortrait = height > width;
+
   const [users, setUsers] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -270,13 +273,13 @@ export default function AdminUserList() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.pageTitle}>👥 QUẢN LÝ NGƯỜI DÙNG</Text>
+      <Text style={[styles.pageTitle, !isPortrait && { fontSize: 12, paddingVertical: 0 }]}>👥 QUẢN LÝ NGƯỜI DÙNG</Text>
 
       {/* Search */}
-      <View style={styles.searchBox}>
-        <Text style={styles.searchIcon}>🔍</Text>
+      <View style={[styles.searchBox, !isPortrait && { marginBottom: 2 }]}>
+        <Text style={[styles.searchIcon, !isPortrait && { fontSize: 14 }]}>🔍</Text>
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, !isPortrait && { minHeight: 26, paddingVertical: 0 }]}
           placeholder="Tìm theo tên, username, SĐT..."
           placeholderTextColor="#666"
           value={search}
@@ -290,14 +293,14 @@ export default function AdminUserList() {
       </View>
 
       {/* Filter tabs */}
-      <View style={styles.filterRow}>
+      <View style={[styles.filterRow, !isPortrait && { marginBottom: 2 }]}>
         {['ALL', 'ACTIVE', 'LOCKED'].map(f => (
           <TouchableOpacity
             key={f}
-            style={[styles.filterTab, filterStatus === f && styles.filterTabActive]}
+            style={[styles.filterTab, filterStatus === f && styles.filterTabActive, !isPortrait && { paddingVertical: 2 }]}
             onPress={() => setFilterStatus(f)}
           >
-            <Text style={[styles.filterTabText, filterStatus === f && styles.filterTabTextActive]}>
+            <Text style={[styles.filterTabText, filterStatus === f && styles.filterTabTextActive, !isPortrait && { fontSize: 10 }]}>
               {f === 'ALL' ? 'Tất cả' : f === 'ACTIVE' ? 'Hoạt động' : 'Bị khóa'}
             </Text>
           </TouchableOpacity>
@@ -305,7 +308,7 @@ export default function AdminUserList() {
       </View>
 
       {/* Summary */}
-      <Text style={styles.summary}>
+      <Text style={[styles.summary, !isPortrait && { marginBottom: 2 }]}>
         Hiển thị {filtered.length}/{users.length} người dùng
       </Text>
 

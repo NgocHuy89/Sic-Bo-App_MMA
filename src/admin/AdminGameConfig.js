@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl, Alert, TextInput, Modal,
-  FlatList,
+  FlatList, Image, useWindowDimensions
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import api from '../services/api'; 
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -18,14 +19,21 @@ const CONFIG_META = {
   MIN_BET: { label: 'Mức Cược Tối Thiểu', icon: '📉', unit: '₫', type: 'currency', hint: 'Số tiền cược nhỏ nhất mỗi lượt' },
   MAX_BET: { label: 'Mức Cược Tối Đa', icon: '📈', unit: '₫', type: 'currency', hint: 'Số tiền cược lớn nhất mỗi lượt' },
   REWARD_RATIO_TAI_XIU: { label: 'Tỷ Lệ Trả Thưởng Tài/Xỉu', icon: '⚖️', unit: 'x', type: 'ratio', hint: 'Nhân hệ số khi thắng (VD: 1.98 = thắng 98%)' },
+  PAYMENT_QR_CODE: { label: 'Mã QR Thanh Toán', icon: '🏦', unit: '', type: 'image', hint: 'Ảnh QR Code để khách chuyển khoản' },
+  PAYMENT_ACCOUNT_NUMBER: { label: 'Số Tài Khoản', icon: '💳', unit: '', type: 'bank_account', hint: 'Thông tin chuyển khoản của nhà cái' },
 };
 
 const GAME_SESSIONS_LIMIT = 10;
 
 // ─── Config Card ───────────────────────────────────────────────────────────────
-function ConfigCard({ config, onEdit }) {
+function ConfigCard({ config, allConfigs, onEdit }) {
   const meta = CONFIG_META[config.key] || { label: config.key, icon: '⚙️', unit: '', hint: config.description };
-  const displayValue = meta.type === 'currency' ? formatVND(config.value) : `${config.value}${meta.unit}`;
+  
+  let displayValue = meta.type === 'currency' ? formatVND(config.value) : `${config.value}${meta.unit}`;
+  if (meta.type === 'bank_account') {
+    const data = config.value || {};
+    displayValue = `${data.bankName || ''}\n${data.accountNumber || ''}\n${data.accountName || ''}`;
+  }
 
   return (
     <View style={styles.configCard}>
@@ -38,7 +46,15 @@ function ConfigCard({ config, onEdit }) {
         </View>
       </View>
       <View style={styles.configRight}>
-        <Text style={styles.configValue}>{displayValue}</Text>
+        {meta.type === 'image' ? (
+           config.value ? (
+             <Image source={{ uri: config.value }} style={{ width: 60, height: 60, borderRadius: 8, marginBottom: 8 }} resizeMode="cover" />
+           ) : (
+             <Text style={[styles.configValue, { fontSize: 12, marginBottom: 8 }]}>Chưa có ảnh</Text>
+           )
+        ) : (
+           <Text style={[styles.configValue, meta.type === 'bank_account' && { fontSize: 13, lineHeight: 18 }]}>{displayValue}</Text>
+        )}
         <TouchableOpacity style={styles.editBtn} onPress={() => onEdit(config)}>
           <Text style={styles.editBtnText}>✏️ Sửa</Text>
         </TouchableOpacity>
@@ -48,17 +64,63 @@ function ConfigCard({ config, onEdit }) {
 }
 
 // ─── Edit Config Modal ─────────────────────────────────────────────────────────
-function EditConfigModal({ visible, config, onClose, onSave }) {
+function EditConfigModal({ visible, config, allConfigs, onClose, onSaveBankAccount, onSave }) {
   const [value, setValue] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [accName, setAccName] = useState('');
   const meta = config ? (CONFIG_META[config.key] || { label: config.key, icon: '⚙️', unit: '', hint: '' }) : {};
 
   useEffect(() => {
-    if (config) setValue(config.value);
-  }, [config]);
+    if (config) {
+      if (meta.type === 'bank_account') {
+        const data = config.value || {};
+        setValue(data.accountNumber || '');
+        setBankName(data.bankName || '');
+        setAccName(data.accountName || '');
+      } else {
+        setValue(config.value);
+      }
+    }
+  }, [config, allConfigs]);
+
+  const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Lỗi', 'Cần cấp quyền truy cập ảnh để tải QR lên!');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.5,
+      base64: true
+    });
+
+    if (!result.canceled && result.assets[0].base64) {
+      const base64Img = `data:image/jpeg;base64,${result.assets[0].base64}`;
+      setValue(base64Img);
+    }
+  };
 
   const handleSave = () => {
     const trimmed = value.trim();
+    if (meta.type === 'bank_account') {
+      if (!trimmed || !bankName.trim() || !accName.trim()) {
+        Alert.alert('Lỗi', 'Vui lòng điền đầy đủ 3 trường thông tin.'); return;
+      }
+      onSaveBankAccount(config, trimmed, bankName.trim(), accName.trim());
+      return;
+    }
+    if (meta.type === 'image') {
+      onSave(config, trimmed);
+      return;
+    }
     if (!trimmed) { Alert.alert('Lỗi', 'Giá trị không được để trống.'); return; }
+    if (meta.type === 'text') {
+      onSave(config, trimmed);
+      return;
+    }
     const num = parseFloat(trimmed);
     if (isNaN(num) || num <= 0) { Alert.alert('Lỗi', 'Vui lòng nhập số hợp lệ lớn hơn 0.'); return; }
     if (config.key === 'REWARD_RATIO_TAI_XIU' && (num < 1 || num > 10)) {
@@ -70,23 +132,50 @@ function EditConfigModal({ visible, config, onClose, onSave }) {
   if (!config) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']}>
       <View style={editModal.overlay}>
         <View style={editModal.box}>
           <Text style={editModal.title}>{meta.icon} {meta.label}</Text>
           <Text style={editModal.hint}>{meta.hint}</Text>
           <Text style={editModal.currentLabel}>Giá trị hiện tại:</Text>
-          <Text style={editModal.currentValue}>{config.value} {meta.unit}</Text>
-          <Text style={editModal.inputLabel}>Giá trị mới:</Text>
-          <TextInput
-            style={editModal.input}
-            value={value}
-            onChangeText={setValue}
-            keyboardType="numeric"
-            placeholder={`Nhập ${meta.label.toLowerCase()}...`}
-            placeholderTextColor="#666"
-            autoFocus
-          />
+          {meta.type === 'image' ? (
+             value ? (
+               <Image source={{ uri: value }} style={{ width: 120, height: 120, borderRadius: 10, alignSelf: 'center', marginBottom: 16 }} resizeMode="contain" />
+             ) : (
+               <Text style={editModal.currentValue}>Chưa có ảnh</Text>
+             )
+          ) : (
+             <Text style={editModal.currentValue}>{config.value} {meta.unit}</Text>
+          )}
+
+          {meta.type === 'image' ? (
+             <TouchableOpacity style={{ backgroundColor: '#350A0A', padding: 12, borderRadius: 10, alignItems: 'center', marginBottom: 12, borderWidth: 1, borderColor: '#D4AF37' }} onPress={handlePickImage}>
+               <Text style={{ color: '#D4AF37', fontWeight: '700' }}>📸 Chọn Ảnh Từ Thư Viện</Text>
+             </TouchableOpacity>
+          ) : meta.type === 'bank_account' ? (
+            <>
+              <Text style={editModal.inputLabel}>Tên ngân hàng (VD: MB Bank):</Text>
+              <TextInput style={editModal.input} value={bankName} onChangeText={setBankName} placeholderTextColor="#666" placeholder="MB Bank" />
+              <Text style={editModal.inputLabel}>Số tài khoản:</Text>
+              <TextInput style={editModal.input} value={value} onChangeText={setValue} keyboardType="numeric" placeholderTextColor="#666" placeholder="0123456789" />
+              <Text style={editModal.inputLabel}>Tên chủ tài khoản:</Text>
+              <TextInput style={editModal.input} value={accName} onChangeText={setAccName} autoCapitalize="characters" placeholderTextColor="#666" placeholder="NGUYEN VAN A" />
+            </>
+          ) : (
+            <>
+              <Text style={editModal.inputLabel}>Giá trị mới:</Text>
+              <TextInput
+                style={editModal.input}
+                value={value}
+                onChangeText={setValue}
+                keyboardType={meta.type === 'text' ? 'default' : 'numeric'}
+                placeholder={`Nhập ${meta.label.toLowerCase()}...`}
+                placeholderTextColor="#666"
+                autoFocus
+              />
+            </>
+          )}
+
           {config.key === 'REWARD_RATIO_TAI_XIU' && (
             <Text style={editModal.tip}>💡 Ví dụ: 1.98 = người thắng nhận 198% tiền cược</Text>
           )}
@@ -136,6 +225,9 @@ function SessionRow({ session }) {
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function AdminGameConfig() {
+  const { width, height } = useWindowDimensions();
+  const isPortrait = height > width;
+
   const [configs, setConfigs] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -181,6 +273,36 @@ export default function AdminGameConfig() {
               setConfigs(prev => prev.map(c => c.id === config.id ? { ...c, value: newValue } : c));
               closeEdit();
               Alert.alert('✅ Thành công', 'Đã cập nhật cấu hình hệ thống.');
+            } catch {
+              Alert.alert('Lỗi', 'Không thể cập nhật cấu hình.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSaveBankAccount = async (config, newAccNum, newBankName, newAccName) => {
+    Alert.alert(
+      'Xác nhận thay đổi',
+      'Cập nhật thông tin Số tài khoản?',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Lưu',
+          onPress: async () => {
+            try {
+              const newValue = {
+                bankName: newBankName,
+                accountNumber: newAccNum,
+                accountName: newAccName
+              };
+              
+              await api.patch(`/system_configs/${config.id}`, { value: newValue });
+
+              setConfigs(prev => prev.map(c => c.id === config.id ? { ...c, value: newValue } : c));
+              closeEdit();
+              Alert.alert('✅ Thành công', 'Đã cập nhật thông tin Số tài khoản.');
             } catch {
               Alert.alert('Lỗi', 'Không thể cập nhật cấu hình.');
             }
@@ -315,21 +437,27 @@ export default function AdminGameConfig() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.pageTitle}>⚙️ CẤU HÌNH GAME</Text>
+      <Text style={[styles.pageTitle, !isPortrait && { fontSize: 12, paddingVertical: 0, marginBottom: 0 }]}>
+        ⚙️ CẤU HÌNH GAME
+      </Text>
 
       {/* Tab switcher */}
-      <View style={styles.tabRow}>
+      <View style={[styles.tabRow, !isPortrait && { marginBottom: 2 }]}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'CONFIG' && styles.tabActive]}
+          style={[styles.tab, activeTab === 'CONFIG' && styles.tabActive, !isPortrait && { paddingVertical: 2 }]}
           onPress={() => setActiveTab('CONFIG')}
         >
-          <Text style={[styles.tabText, activeTab === 'CONFIG' && styles.tabTextActive]}>⚙️ Cấu Hình</Text>
+          <Text style={[styles.tabText, activeTab === 'CONFIG' && styles.tabTextActive, !isPortrait && { fontSize: 11 }]}>
+            ⚙️ Cấu Hình
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'SESSIONS' && styles.tabActive]}
+          style={[styles.tab, activeTab === 'SESSIONS' && styles.tabActive, !isPortrait && { paddingVertical: 2 }]}
           onPress={() => setActiveTab('SESSIONS')}
         >
-          <Text style={[styles.tabText, activeTab === 'SESSIONS' && styles.tabTextActive]}>🎲 Phiên Game</Text>
+          <Text style={[styles.tabText, activeTab === 'SESSIONS' && styles.tabTextActive, !isPortrait && { fontSize: 11 }]}>
+            🎲 Phiên Game
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -342,7 +470,7 @@ export default function AdminGameConfig() {
             Thay đổi các thông số hệ thống sẽ có hiệu lực ngay lập tức với các phiên game mới.
           </Text>
           {configs.map(cfg => (
-            <ConfigCard key={cfg.id} config={cfg} onEdit={openEdit} />
+            <ConfigCard key={cfg.id} config={cfg} allConfigs={configs} onEdit={openEdit} />
           ))}
 
           {/* Preview */}
@@ -397,8 +525,10 @@ export default function AdminGameConfig() {
       <EditConfigModal
         visible={editVisible}
         config={editTarget}
+        allConfigs={configs}
         onClose={closeEdit}
         onSave={handleSave}
+        onSaveBankAccount={handleSaveBankAccount}
       />
     </View>
   );

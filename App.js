@@ -12,6 +12,7 @@ import MainNavigator from './src/navigation/MainNavigator';
 import AdminScreen from './src/admin/AdminScreen';
 import CrashGameScreen from './src/games/CrashGame/CrashGameScreen';
 import TowerClimberScreen from './src/games/TowerClimber/TowerClimberScreen';
+import GlobalAlert from './src/common/GlobalAlert';
 
 const Stack = createNativeStackNavigator();
 
@@ -59,17 +60,20 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name="Main" component={MainNavigator} initialParams={initialParams} />
-        <Stack.Screen name="Admin" component={AdminScreen} initialParams={initialParams} />
-        <Stack.Screen name="CrashGame" component={CrashGameScreen} />
-        <Stack.Screen name="LeoThap" component={TowerClimberScreen} />
-      </Stack.Navigator>
-      <StatusBar style="light" />
-    </NavigationContainer>
+    <>
+      <NavigationContainer>
+        <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="Main" component={MainNavigator} initialParams={initialParams} />
+          <Stack.Screen name="Admin" component={AdminScreen} initialParams={initialParams} />
+          <Stack.Screen name="CrashGame" component={CrashGameScreen} />
+          <Stack.Screen name="LeoThap" component={TowerClimberScreen} />
+        </Stack.Navigator>
+        <StatusBar style="light" />
+      </NavigationContainer>
+      <GlobalAlert />
+    </>
   );
 }
 

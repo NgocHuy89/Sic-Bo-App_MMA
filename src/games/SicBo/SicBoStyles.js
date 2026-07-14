@@ -14,7 +14,7 @@ const COLORS = {
   redCancel: '#7A0C0C',
 };
 
-export const getStyles = (width) => StyleSheet.create({
+export const getStyles = (width, height, isPortrait) => StyleSheet.create({
   // Overlay
   modalOverlay: {
     flex: 1,
@@ -122,7 +122,19 @@ export const getStyles = (width) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: isPortrait ? 5 : 10,
+  },
+  boardContentPortrait: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 5,
+  },
+  doorsRowPortrait: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 20,
   },
 
   doorPanel: {
@@ -136,6 +148,11 @@ export const getStyles = (width) => StyleSheet.create({
     justifyContent: 'space-between',
     minHeight: 80,
   },
+  doorPanelPortrait: {
+    flex: 0,
+    width: '48%',
+    minHeight: 140, // Tăng chiều cao để chiếm bớt khoảng trống
+  },
   doorPanelActive: {
     borderColor: COLORS.goldLight,
     borderWidth: 3,
@@ -147,7 +164,7 @@ export const getStyles = (width) => StyleSheet.create({
     elevation: 5,
   },
   doorTitle: {
-    fontSize: 24,
+    fontSize: isPortrait ? 20 : 24,
     fontWeight: '900',
     textShadowColor: COLORS.gold,
     textShadowOffset: { width: 1, height: 1 },
@@ -212,6 +229,13 @@ export const getStyles = (width) => StyleSheet.create({
     shadowRadius: 10,
     elevation: 10,
   },
+  diceCenterContainerPortrait: {
+    width: 110, // Phóng to xúc xắc khi ở giao diện dọc
+    height: 110,
+    borderRadius: 55,
+    marginHorizontal: 0,
+    marginTop: 10,
+  },
   diceIconGroup: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -219,6 +243,10 @@ export const getStyles = (width) => StyleSheet.create({
     alignItems: 'center',
     width: 60,
     height: 60,
+  },
+  diceIconGroupPortrait: {
+    width: 90,
+    height: 90,
   },
   diceEmoji: {
     fontSize: 24,
@@ -287,6 +315,7 @@ export const getStyles = (width) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 5,
+    flexWrap: isPortrait ? 'wrap' : 'nowrap',
   },
   chipButton: {
     backgroundColor: COLORS.brownPanel,
