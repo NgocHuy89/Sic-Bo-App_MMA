@@ -27,27 +27,6 @@ const GAMES = [
     icon: '🎲',
   },
   {
-    id: '2',
-    title: 'BẦU CUA',
-    subtitle: 'TÔM CÁ',
-    color: '#D2691E',
-    icon: '🦀',
-  },
-  {
-    id: '3',
-    title: 'ROULETTE',
-    subtitle: 'VÒNG QUAY MAY MẮN',
-    color: '#006400',
-    icon: '🎡',
-  },
-  {
-    id: '4',
-    title: 'POKER',
-    subtitle: 'TEXAS HOLDEM',
-    color: '#4B0082',
-    icon: '🃏',
-  },
-  {
     id: '5',
     title: 'MÁY BAY',
     subtitle: 'CHUYẾN BAY MẠO HIỂM',

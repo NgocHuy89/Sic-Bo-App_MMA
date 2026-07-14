@@ -260,27 +260,27 @@ export default function AdminGameConfig() {
               const rewardRatio = ratioCfg ? parseFloat(ratioCfg.value) : 1.98;
 
               // Settle từng bet và cập nhật balance người chơi
-              const settlePromises = sessionBets
-                .filter(b => b.status === 'PENDING')
-                .map(async (bet) => {
-                  const isWon = bet.bet_choice === result;
-                  const winAmount = isWon ? Math.floor(bet.bet_amount * rewardRatio) : 0;
-                  // Cập nhật bet
-                  await api.patch(`/bets/${bet.id}`, {
-                    status: isWon ? 'WON' : 'LOST',
-                    win_amount: winAmount,
-                  });
-                  // Nếu thắng, cộng tiền cho người chơi
-                  if (isWon) {
-                    const userRes = await api.get(`/users/${bet.user_id}`);
-                    const currentBalance = userRes.data.balance || 0;
-                    await api.patch(`/users/${bet.user_id}`, {
-                      balance: currentBalance + winAmount,
-                    });
-                  }
+              // Settle tuần tự từng bet để tránh lỗi Network Error (json-server lock file / ngrok rate limit)
+              const pendingBets = sessionBets.filter(b => b.status === 'PENDING');
+              for (const bet of pendingBets) {
+                const isWon = bet.bet_choice === result;
+                const winAmount = isWon ? Math.floor(bet.bet_amount * rewardRatio) : 0;
+                
+                // Cập nhật bet
+                await api.patch(`/bets/${bet.id}`, {
+                  status: isWon ? 'WON' : 'LOST',
+                  win_amount: winAmount,
                 });
-
-              await Promise.all(settlePromises);
+                
+                // Nếu thắng, cộng tiền cho người chơi
+                if (isWon) {
+                  const userRes = await api.get(`/users/${bet.user_id}`);
+                  const currentBalance = userRes.data.balance || 0;
+                  await api.patch(`/users/${bet.user_id}`, {
+                    balance: currentBalance + winAmount,
+                  });
+                }
+              }
 
               setSessions(prev => prev.map(s =>
                 s.id === session.id
