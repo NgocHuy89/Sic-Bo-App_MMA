@@ -420,7 +420,7 @@ export default function AdminTransactions({ route }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1E0505' },
   center: { flex: 1, backgroundColor: '#1E0505', justifyContent: 'center', alignItems: 'center' },
-  pageTitle: { fontSize: 20, fontWeight: '900', color: '#D4AF37', textAlign: 'center', paddingVertical: 16 },
+  pageTitle: { fontSize: 18, fontWeight: '900', color: '#D4AF37', textAlign: 'center', paddingVertical: 10 },
   loadingText: { color: '#D4AF37', marginTop: 10 },
   alertBanner: { backgroundColor: '#3D2800', borderWidth: 1, borderColor: '#FF9800', marginHorizontal: 16, borderRadius: 10, padding: 10, marginBottom: 10 },
   alertText: { color: '#FF9800', fontWeight: '700', textAlign: 'center', fontSize: 13 },

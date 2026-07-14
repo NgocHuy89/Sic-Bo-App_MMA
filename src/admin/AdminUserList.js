@@ -339,7 +339,7 @@ export default function AdminUserList() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1E0505' },
   center: { flex: 1, backgroundColor: '#1E0505', justifyContent: 'center', alignItems: 'center' },
-  pageTitle: { fontSize: 20, fontWeight: '900', color: '#D4AF37', textAlign: 'center', paddingVertical: 16 },
+  pageTitle: { fontSize: 18, fontWeight: '900', color: '#D4AF37', textAlign: 'center', paddingVertical: 10 },
   loadingText: { color: '#D4AF37', marginTop: 10 },
   searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#350A0A', borderRadius: 10, borderWidth: 1, borderColor: '#D4AF37', marginHorizontal: 16, marginBottom: 10, paddingHorizontal: 12 },
   searchIcon: { fontSize: 16, marginRight: 8 },

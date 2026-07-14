@@ -417,7 +417,7 @@ function PreviewRow({ label, value, accent }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1E0505' },
   center: { flex: 1, backgroundColor: '#1E0505', justifyContent: 'center', alignItems: 'center' },
-  pageTitle: { fontSize: 20, fontWeight: '900', color: '#D4AF37', textAlign: 'center', paddingVertical: 16 },
+  pageTitle: { fontSize: 18, fontWeight: '900', color: '#D4AF37', textAlign: 'center', paddingVertical: 10 },
   loadingText: { color: '#D4AF37', marginTop: 10 },
   tabRow: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 12, backgroundColor: '#350A0A', borderRadius: 12, padding: 4 },
   tab: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center' },

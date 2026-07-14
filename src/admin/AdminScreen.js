@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform, StatusBar } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -39,9 +39,9 @@ function AdminHeader({ navigation, user }) {
 
   return (
     <View style={header.bar}>
-      <View>
-        <Text style={header.title}>👑 ADMIN PANEL</Text>
-        <Text style={header.sub}>Xin chào, {user?.full_name || 'Admin'}</Text>
+      <View style={header.textBlock}>
+        <Text style={header.title} numberOfLines={1}>👑 ADMIN PANEL</Text>
+        <Text style={header.sub} numberOfLines={1}>Xin chào, {user?.full_name || 'Admin'}</Text>
       </View>
       <TouchableOpacity style={header.logoutBtn} onPress={handleLogout}>
         <Text style={header.logoutText}>🚪 Xuất</Text>
@@ -118,20 +118,25 @@ const header = StyleSheet.create({
     backgroundColor: '#1E0505',
     borderBottomWidth: 1.5,
     borderBottomColor: '#D4AF37',
-    paddingHorizontal: 16,
-    paddingTop: 48,
-    paddingBottom: 12,
+    paddingHorizontal: 14,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 4 : 8,
+    paddingBottom: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 10,
+  },
+  textBlock: {
+    flex: 1,
+    minWidth: 0,
   },
   title: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '900',
     color: '#D4AF37',
   },
   sub: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#A07855',
     marginTop: 2,
   },
@@ -140,13 +145,14 @@ const header = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#7B1C1C',
     borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    flexShrink: 0,
   },
   logoutText: {
     color: '#FF4444',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: 12,
   },
 });
 
