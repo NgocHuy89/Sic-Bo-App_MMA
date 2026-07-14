@@ -18,9 +18,9 @@ import {
   Animated,
   Alert,
   useWindowDimensions,
-  Platform
+  Platform,
 } from "react-native";
-import axios from 'axios';
+import axios from "axios";
 
 // ─── GAME CONFIG ──────────────────────────────────────────────────────────────
 const COLS = 3;
@@ -28,7 +28,7 @@ const ROWS = 8;
 const BOMBS_PER_ROW = 1;
 // Nếu đang chạy trên Web -> dùng 'localhost'
 // Nếu đang chạy trên Điện thoại -> tự động dùng IP mạng LAN '192.168.1.30'
-const SERVER_IP = Platform.OS === 'web' ? 'localhost' : '192.168.1.30'; 
+const SERVER_IP = Platform.OS === "web" ? "localhost" : "192.168.1.30";
 
 // (Bạn nhớ đổi 192.168.1.30 thành IP thực tế của máy tính nếu nó bị thay đổi nhé)
 
@@ -184,43 +184,45 @@ const Cell = ({
   // Phân loại Visual UI cực kỳ rõ ràng giữa Clickable và Disabled
   // Đã xóa bỏ thuộc tính shadowColor không cần thiết
   let cellBg, icon, label, borderColor, iconColor;
-  
+
   switch (state) {
-    case 'hidden':
-      cellBg = disabled ? '#0f1626' : '#243b6b';      
-      borderColor = disabled ? '#1c283d' : '#6b9cff'; 
-      iconColor = disabled ? '#2a3d5a' : '#ffffff';   
-      icon = '?';
+    case "hidden":
+      cellBg = disabled ? "#0f1626" : "#243b6b";
+      borderColor = disabled ? "#1c283d" : "#6b9cff";
+      iconColor = disabled ? "#2a3d5a" : "#ffffff";
+      icon = "?";
       break;
-    case 'safe_revealed':
-      cellBg = '#0d2218';
-      borderColor = '#00c853';
-      icon = '💎';
+    case "safe_revealed":
+      cellBg = "#0d2218";
+      borderColor = "#00c853";
+      icon = "💎";
       label = `${multiplier}x`;
       break;
-    case 'bomb_revealed':
-      cellBg = '#2a0a0a';
-      borderColor = '#ff3333';
-      icon = '💣';
+    case "bomb_revealed":
+      cellBg = "#2a0a0a";
+      borderColor = "#ff3333";
+      icon = "💣";
       break;
-    case 'safe_auto': 
-      cellBg = '#0a1a10';
-      borderColor = '#1a4a2a';
-      icon = '💎';
+    case "safe_auto":
+      cellBg = "#0a1a10";
+      borderColor = "#1a4a2a";
+      icon = "💎";
       break;
     default:
-      cellBg = '#101824';
-      borderColor = '#1a2535';
-      icon = '';
+      cellBg = "#101824";
+      borderColor = "#1a2535";
+      icon = "";
   }
 
   return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }, { translateX: shakeAnim }] }}>
+    <Animated.View
+      style={{ transform: [{ scale: scaleAnim }, { translateX: shakeAnim }] }}
+    >
       {/* Vòng sáng nhấp nháy cho ô đang Active */}
-      {isActiveRow && state === 'hidden' && !disabled && (
-        <Animated.View 
-          style={[styles.cellGlowRing, { borderColor, opacity: glowOpacity }]} 
-          pointerEvents="none" 
+      {isActiveRow && state === "hidden" && !disabled && (
+        <Animated.View
+          style={[styles.cellGlowRing, { borderColor, opacity: glowOpacity }]}
+          pointerEvents="none"
         />
       )}
 
@@ -231,7 +233,7 @@ const Cell = ({
         style={[
           styles.cell,
           // Chỉ giữ lại màu nền và viền. Cắt bỏ hoàn toàn shadow/elevation để chống xô lệch trên Android!
-          { backgroundColor: cellBg, borderColor } 
+          { backgroundColor: cellBg, borderColor },
         ]}
       >
         <Text style={[styles.cellIcon, { color: iconColor }]}>{icon}</Text>
@@ -322,7 +324,7 @@ export default function TowerClimberScreen({ navigation, route }) {
   const { width, height } = useWindowDimensions();
 
   // 1. Nhận userId từ màn hình đăng nhập truyền sang
-  const currentUserId = route?.params?.userId; 
+  const currentUserId = route?.params?.userId;
   const isPortrait = height > width;
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -339,20 +341,22 @@ export default function TowerClimberScreen({ navigation, route }) {
   const scrollRef = useRef(null);
   const betRef = useRef("10000");
 
-const syncBalanceToDB = async (newBalance) => {
+  const syncBalanceToDB = async (newBalance) => {
     console.log("--- BẮT ĐẦU ĐỒNG BỘ DB ---");
     console.log("1. User ID hiện tại:", currentUserId);
     console.log("2. Số dư mới cần lưu:", newBalance);
 
     if (!currentUserId) {
-      console.warn("❌ CẢNH BÁO: Không tìm thấy currentUserId! Màn hình trước chưa truyền 'userId' sang.");
-      return; 
+      console.warn(
+        "❌ CẢNH BÁO: Không tìm thấy currentUserId! Màn hình trước chưa truyền 'userId' sang.",
+      );
+      return;
     }
 
     try {
       const url = `http://${SERVER_IP}:3000/users/${currentUserId}`;
       console.log("3. Đang gọi API tới link:", url);
-      
+
       const response = await axios.patch(url, { balance: newBalance });
       console.log("✅ 4. LƯU THÀNH CÔNG! Dữ liệu phản hồi:", response.data);
     } catch (error) {
@@ -561,9 +565,9 @@ const syncBalanceToDB = async (newBalance) => {
       </View>
 
       {/* ── Main layout ── */}
-      <View style={styles.mainLayout}>
+      <View style={[styles.mainLayout, isPortrait && styles.mainLayoutPortrait]}>
         {/* LEFT: Tower */}
-        <View style={styles.towerWrap}>
+        <View style={[styles.towerWrap, isPortrait && styles.towerWrapPortrait]}>
           {/* Crown */}
           <View style={styles.towerCrown}>
             <Text style={styles.crownText}>🏆</Text>
@@ -602,7 +606,7 @@ const syncBalanceToDB = async (newBalance) => {
         </View>
 
         {/* RIGHT: Controls + History */}
-        <View style={styles.rightPanel}>
+        <View style={[styles.rightPanel, isPortrait && styles.rightPanelPortrait]}>
           {/* Status card */}
           <View style={styles.statusCard}>
             {gameState === "idle" && (
@@ -876,6 +880,16 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
+  mainLayoutPortrait: {
+    flexDirection: "column",
+  },
+
+  towerWrapPortrait: {
+    flex: 1, // chiếm phần trên
+  },
+  rightPanelPortrait: {
+    flex: 1, // chiếm phần dưới, sẽ cuộn được
+  },
   // ── Tower ──
   towerWrap: {
     flex: 1.2,
@@ -972,16 +986,16 @@ const styles = StyleSheet.create({
     borderRadius: 1,
   },
 
-// ── Cell ──
+  // ── Cell ──
   cell: {
     width: 54,
     height: 54,
     borderRadius: 10,
-    borderWidth: 2,         
-    borderStyle: 'solid',   
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',      
+    borderWidth: 2,
+    borderStyle: "solid",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
   },
   cellGlowRing: {
     position: "absolute",
