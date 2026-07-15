@@ -199,6 +199,11 @@ function TxCard({ tx, userName, onPress, onQuickApprove, onQuickReject }) {
           <Text style={styles.cardName}>{userName}</Text>
           <Text style={[styles.cardType, { color: typeCfg.color }]}>{typeCfg.label}</Text>
           <Text style={styles.cardDate}>{formatDateTime(tx.created_at)}</Text>
+          {tx.type === 'DEPOSIT' && tx.verification_code && (
+            <Text style={{ color: '#D4AF37', fontSize: 11, marginTop: 4, fontWeight: 'bold' }}>
+              ND CK: {tx.verification_code}
+            </Text>
+          )}
         </View>
         <View style={styles.cardRight}>
           <Text style={[styles.cardAmount, { color: typeCfg.color }]}>{formatVND(tx.amount)}</Text>
