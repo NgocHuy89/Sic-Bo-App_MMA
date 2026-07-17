@@ -87,7 +87,7 @@ export default function HomeScreen({ navigation, route }) {
   const floatAnim = useRef(new Animated.Value(0)).current;
 
   // States for Global Game Loop
-  const [timeLeft, setTimeLeft] = useState(60);
+  const [timeLeft, setTimeLeft] = useState(30);
   const [gamePhase, setGamePhase] = useState('BETTING'); // 'BETTING' | 'RESULT'
   const [currentSessionId, setCurrentSessionId] = useState(null);
 
@@ -190,7 +190,7 @@ export default function HomeScreen({ navigation, route }) {
           setGamePhase('BETTING');
           setPlacedBetTai(0);
           setPlacedBetXiu(0);
-          return 60;
+          return 30;
         }
 
         return prev - 1;

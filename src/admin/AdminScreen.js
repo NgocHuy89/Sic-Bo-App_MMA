@@ -9,6 +9,7 @@ import AdminDashboard from './AdminDashboard';
 import AdminUserList from './AdminUserList';
 import AdminTransactions from './AdminTransactions';
 import AdminGameConfig from './AdminGameConfig';
+import AdminTopUsers from './AdminTopUsers';
 
 const Tab = createBottomTabNavigator();
 
@@ -91,6 +92,14 @@ export default function AdminScreen({ navigation, route }) {
         options={{
           tabBarLabel: 'Thống kê',
           tabBarIcon: ({ focused }) => <TabIcon emoji="📊" focused={focused} />,
+        }}
+      />
+      <Tab.Screen
+        name="TopUsers"
+        component={AdminTopUsers}
+        options={{
+          tabBarLabel: 'Đại gia',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🏆" focused={focused} />,
         }}
       />
       <Tab.Screen

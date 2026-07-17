@@ -71,6 +71,10 @@ export default function AdminDashboard() {
       const totalUsers = users.filter(u => u.role === 'CUSTOMER').length;
       const activeUsers = users.filter(u => u.role === 'CUSTOMER' && u.status === 'ACTIVE').length;
       const totalBalance = users.reduce((s, u) => s + (u.balance || 0), 0);
+      const topUsers = [...users]
+        .filter(u => u.role === 'CUSTOMER')
+        .sort((a, b) => (b.balance || 0) - (a.balance || 0))
+        .slice(0, 10);
 
       // Transactions
       const pendingTx = transactions.filter(t => t.status === 'PENDING').length;
@@ -107,6 +111,7 @@ export default function AdminDashboard() {
         totalBetAmount, totalWinAmount, wonBets, lostBets,
         sessionChart, maxVol,
         houseProfit: totalBetAmount - totalWinAmount,
+        topUsers,
       });
     } catch (e) {
       console.error('Dashboard fetch error:', e);
@@ -260,6 +265,10 @@ const styles = StyleSheet.create({
   errorText: { color: '#FF4444', fontSize: 16, marginBottom: 16 },
   retryBtn: { backgroundColor: '#D4AF37', paddingHorizontal: 24, paddingVertical: 10, borderRadius: 10 },
   retryText: { color: '#1E0505', fontWeight: 'bold' },
+  topUserRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#2A0808' },
+  topUserRank: { color: '#D4AF37', fontSize: 14, fontWeight: '900', width: 30 },
+  topUserName: { color: '#F9E596', fontSize: 14, flex: 1, marginLeft: 8 },
+  topUserBalance: { color: '#4CAF50', fontSize: 14, fontWeight: '700' },
 });
 
 const card = StyleSheet.create({
