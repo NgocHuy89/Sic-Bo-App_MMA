@@ -39,7 +39,7 @@
       "role": "CUSTOMER",
       "full_name": "Test",
       "phone_number": "0384006228",
-      "balance": 1000000,
+      "balance": 0,
       "status": "ACTIVE",
       "created_at": "2026-07-14T22:20:47.360Z",
       "id": "GTUiDcegw8w"
