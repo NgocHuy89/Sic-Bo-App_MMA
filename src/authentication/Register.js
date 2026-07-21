@@ -69,8 +69,13 @@ export default function RegisterScreen({ navigation }) {
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
+        enabled={Platform.OS === 'ios'}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           
           <View style={styles.headerContainer}>
             <Text style={styles.title}>ĐĂNG KÝ</Text>

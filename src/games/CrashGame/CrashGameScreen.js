@@ -12,6 +12,7 @@ import {
   Alert, FlatList, useWindowDimensions, Animated, Easing,
   Platform // Đã thêm Platform để nhận diện thiết bị
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../services/api';
 // ─── CONFIG ────────────────────────────────────────────────────────────────────
 const COUNTDOWN_SECS = 5;        // giây chờ giữa các phiên
@@ -61,6 +62,12 @@ export default function CrashGameScreen({ navigation, route }) {
       await api.patch(`/users/${currentUserId}`, {
         balance: newBalance
       });
+      const userDataString = await AsyncStorage.getItem('logged_in_user');
+      if (userDataString) {
+        const userObj = JSON.parse(userDataString);
+        userObj.balance = newBalance;
+        await AsyncStorage.setItem('logged_in_user', JSON.stringify(userObj));
+      }
       console.log(`[CrashGame] Đã đồng bộ số dư: ${newBalance}`);
     } catch (error) {
       console.error("Lỗi cập nhật DB:", error.message);

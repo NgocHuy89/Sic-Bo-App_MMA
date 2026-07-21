@@ -66,8 +66,13 @@ export default function LoginScreen({ navigation }) {
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
+        enabled={Platform.OS === 'ios'}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Tiêu đề mang phong cách Casino / Tài xỉu */}
           <View style={styles.headerContainer}>
             <Text style={styles.title}>TÀI XỈU</Text>

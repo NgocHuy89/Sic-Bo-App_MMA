@@ -20,6 +20,7 @@ import {
   useWindowDimensions,
   Platform
 } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../services/api';
 // ─── GAME CONFIG ──────────────────────────────────────────────────────────────
 const COLS = 3;
@@ -348,6 +349,12 @@ const syncBalanceToDB = async (newBalance) => {
       console.log("3. Đang gọi API tới link:", url);
       
       const response = await api.patch(url, { balance: newBalance });
+      const userDataString = await AsyncStorage.getItem('logged_in_user');
+      if (userDataString) {
+        const userObj = JSON.parse(userDataString);
+        userObj.balance = newBalance;
+        await AsyncStorage.setItem('logged_in_user', JSON.stringify(userObj));
+      }
       console.log("✅ 4. LƯU THÀNH CÔNG! Dữ liệu phản hồi:", response.data);
     } catch (error) {
       console.error("❌ 4. LỖI CẬP NHẬT DB:", error.message);

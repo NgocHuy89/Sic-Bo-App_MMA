@@ -3,7 +3,7 @@
     {
       "id": "1",
       "username": "admin",
-      "password": "123",
+      "password": "123456",
       "role": "ADMIN",
       "full_name": "Quản Trị Viên",
       "phone_number": "0987654321",
@@ -14,11 +14,11 @@
     {
       "id": "2",
       "username": "customer",
-      "password": "123",
+      "password": "123456",
       "role": "CUSTOMER",
       "full_name": "Nguyễn Văn A",
       "phone_number": "0123456789",
-      "balance": 2000000,
+      "balance": 200000,
       "status": "ACTIVE",
       "created_at": "2024-01-02T00:00:00.000Z"
     },
@@ -28,7 +28,7 @@
       "role": "CUSTOMER",
       "full_name": "ngochuy",
       "phone_number": "0384006228",
-      "balance": 1890000,
+      "balance": 189000,
       "status": "ACTIVE",
       "created_at": "2026-06-21T21:50:13.743Z",
       "id": "uxIHtp7QPFA"
